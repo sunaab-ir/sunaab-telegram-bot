@@ -8,4 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class telProcess_telUser extends Model
 {
     use HasFactory;
+
+
 }

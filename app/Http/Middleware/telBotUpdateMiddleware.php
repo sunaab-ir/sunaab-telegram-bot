@@ -20,24 +20,33 @@ class telBotUpdateMiddleware
      */
     public function handle (Request $request, Closure $next)
     {
+        $request->botUpdate = Telegram::getWebhookUpdates();
         $user = $this->getTelUser($request);
         $request->botUser = $user;
-        $request->botUpdate = Telegram::getWebhookUpdates();
         return $next($request);
     }
 
     function getTelUser (Request $request)
     {
-        $user_id = $request['message']['from']['id'];
-        $last_user_message_id =  $request['message']['message_id'];
-        $user = telUser::with('currentProcess')->find($user_id);
+        $isBot =  $request->botUpdate->getMessage()->getFrom()->isBot;
+        if ($isBot)
+            $user_id = $request->botUpdate->getMessage()->getChat()->id;
+        else
+            $user_id = $request->botUpdate->getMessage()->getFrom()->id;
+        $last_user_message_id =  $request->botUpdate->getMessage()->messageId;
+        $user = telUser::with('Process')->find($user_id);
         $maxRetrySave = 3;
         if (!$user) {
-            $chat_id = $request['message']['chat']['id'];
-            $first_name =  $request['message']['from']['first_name'];
-            $last_name =  $request['message']['from']['last_name'] ?? "";
-            $username =  $request['message']['from']['username'] ?? "";
-            $isBot =  $request['message']['from']['is_bot'] ?? "";
+            $chat_id = $request->botUpdate->getMessage()->getChat()->id;
+            if ($isBot) {
+                $first_name = $request->botUpdate->getMessage()->getChat()->firstName;
+                $last_name = $request->botUpdate->getMessage()->getChat()->lastName ?? "";
+                $username = $request->botUpdate->getMessage()->getChat()->userName ?? "";
+            }else {
+                $first_name = $request->botUpdate->getMessage()->getFrom()->firstName;
+                $last_name = $request->botUpdate->getMessage()->getFrom()->lastName ?? "";
+                $username = $request->botUpdate->getMessage()->getFrom()->userName ?? "";
+            }
             $user = new telUser();
             $user->user_id = $user_id;
             $user->chat_id = $chat_id;
@@ -49,7 +58,7 @@ class telBotUpdateMiddleware
             retrySaveUser:
             if ($user->save()) {
                 $user->user_id = $user_id;
-                $user->currentProcess()->sync([1]);
+                $user->Process()->sync([1]);
                 return $user;
             }
             if (--$maxRetrySave > 0)

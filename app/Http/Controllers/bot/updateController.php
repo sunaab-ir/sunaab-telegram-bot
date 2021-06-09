@@ -18,8 +18,14 @@ class updateController extends Controller
 
     public function update(Request $request) {
         if ($request->botUpdate->detectType() == 'callback_query') {
-            $this->botService->handleProcess($request->botUpdate->callbackQuery->data, $request->botUser);
-        }else
+            $callbackData = json_decode($request->botUpdate->callbackQuery->data, true);
+            if (isset($callbackData['process_id']))
+                $this->botService->handleProcess($callbackData['process_id'], $request->botUser);
+            else
+               goto handleCurrentProcess;
+        }else {
+            handleCurrentProcess:
             $this->botService->handleProcess($request->botUser->currentProcess, $request->botUser);
+        }
     }
 }
