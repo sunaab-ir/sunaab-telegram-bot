@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateTelProcessTelUsersTable extends Migration
+class CreateTelUserTracksTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,12 +13,15 @@ class CreateTelProcessTelUsersTable extends Migration
      */
     public function up()
     {
-        Schema::create('tel_process_tel_users', function (Blueprint $table) {
-            $table->increments('id');
-            $table->unsignedInteger('tel_process_id');
+        Schema::create('tel_user_tracks', function (Blueprint $table) {
+            $table->bigIncrements('id');
             $table->unsignedInteger('tel_user_id');
+            $table->unsignedInteger('tel_process_id');
+            $table->string('process_state');
             $table->string('sub_process')->nullable();
-            $table->enum('process_state', ['normal', 'input', 'processing'])->default('normal');
+            $table->enum('type', ['in', ['out']])->default('in');
+            $table->string('entry_type');
+            $table->string('user_input')->nullable();
             $table->timestamps();
         });
     }
@@ -30,6 +33,6 @@ class CreateTelProcessTelUsersTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('tel_process_tel_users');
+        Schema::dropIfExists('tel_user_tracks');
     }
 }

@@ -16,4 +16,10 @@ class telUser extends Model
     function getCurrentProcessAttribute() {
         return $this->Process()->first();
     }
+    function Profile() {
+        return $this->hasOne(telUserProfile::class, 'user_id');
+    }
+    function Tracks() {
+        return $this->hasMany(telUserTrack::class, 'tel_user_id', 'user_id');
+    }
 }

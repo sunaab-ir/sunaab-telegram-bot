@@ -2,3 +2,6 @@
 
 
 const BOT_PROCESS__MAIN = 1;
+const BOT_PROCESS__PROFILE = 2;
+const BOT_PROCESS__ABOUT = 3;
+const BOT_PROCESS__CONTACT = 4;

@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\telUser;
+use App\Models\telUserTrack;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class telBotUpdateMiddleware
         $request->botUpdate = Telegram::getWebhookUpdates();
         $user = $this->getTelUser($request);
         $request->botUser = $user;
+        $this->setTrack($request);
         return $next($request);
     }
 
@@ -34,7 +36,7 @@ class telBotUpdateMiddleware
         else
             $user_id = $request->botUpdate->getMessage()->getFrom()->id;
         $last_user_message_id =  $request->botUpdate->getMessage()->messageId;
-        $user = telUser::with('Process')->find($user_id);
+        $user = telUser::with(['Process', 'Profile', 'Tracks'])->find($user_id);
         $maxRetrySave = 3;
         if (!$user) {
             $chat_id = $request->botUpdate->getMessage()->getChat()->id;
@@ -67,5 +69,21 @@ class telBotUpdateMiddleware
         $user->last_user_message_id = $last_user_message_id;
         $user->save();
         return $user;
+    }
+
+    function setTrack(Request $request) {
+        $user = $request->botUser;
+        $update = $request->botUpdate;
+        $track = new telUserTrack();
+        $track->tel_process_id = $user->currentProcess->id;
+        $track->process_state = $user->currentProcess->pivot->process_state;
+        $track->sub_process = $user->currentProcess->pivot->sub_process;
+        $track->type = "in";
+        $track->entry_type = $update->detectType();
+        if ($update->detectType() == "callback_query")
+            $track->user_input = $update->callbackQuery->data;
+        else
+            $track->user_input = $update->getMessage()->text;
+        $user->Tracks()->save($track);
     }
 }

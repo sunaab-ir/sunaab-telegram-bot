@@ -15,4 +15,7 @@ class telProcess extends Model
     function getUserAttribute() {
         return $this->_user()->first();
     }
+    function Tracks() {
+        return $this->hasMany(telProcess::class);
+    }
 }

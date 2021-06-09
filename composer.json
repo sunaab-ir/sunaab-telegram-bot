@@ -34,7 +34,8 @@
             "Tests\\": "tests/"
         },
         "files": [
-            "app/Helpers/bot/Processes.php"
+            "app/Helpers/bot/Processes.php",
+            "app/Helpers/bot/Messages.php"
         ]
     },
     "scripts": {
