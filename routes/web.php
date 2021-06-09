@@ -1,7 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\bot\updateController;
+use App\Http\Middleware\telBotUpdateMiddleware;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -16,3 +17,5 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::post('telegramBot/update', [updateController::class, 'update'])->middleware([telBotUpdateMiddleware::class]);
