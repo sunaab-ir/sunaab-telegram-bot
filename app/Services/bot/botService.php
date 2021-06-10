@@ -6,6 +6,7 @@ namespace App\Services\bot;
 
 use App\Models\telProcess;
 use App\Models\telUser;
+use Illuminate\Support\Facades\Log;
 use Telegram\Bot\Laravel\Facades\Telegram;
 use Telegram\Bot\Objects\User;
 
@@ -76,6 +77,7 @@ class botService
         }
         $options['chat_id'] = $this->botUser->chat_id;
         try {
+            resend:
             if ($type == "editMessageText") {
                 $options['message_id'] = $this->botUser->last_bot_message_id;
                 if ($this->botUser->last_bot_message_id < $this->botUser->last_user_message_id) {
@@ -90,6 +92,8 @@ class botService
                 unset($options['message_id']);
                 $response = Telegram::$type($options);
             }
+            if ($exception->getCode() == 29)
+                goto resend;
         }
         if ($type != "editMessageText") {
             $this->botUser->last_bot_message_id = $response->messageId;
