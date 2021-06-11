@@ -19,6 +19,7 @@ class CreateTelUserProfilesTable extends Migration
             $table->string('full_name')->nullable();
             $table->string('mobile_number')->nullable();
             $table->unsignedInteger('county_id')->nullable();
+            $table->unsignedInteger('city_id')->nullable();
             $table->unsignedInteger('village_id')->nullable();
             $table->boolean('is_manual_worker')->nullable();
             $table->timestamps();

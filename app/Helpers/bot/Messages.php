@@ -1,7 +1,7 @@
 <?php
 
 
-const BOT_MESSAGE__INVALID_VALUE = '⭕️ مقدار ارسالی نا معتبر است!
+const BOT_MESSAGE__ENTRY__INVALID = '⭕️ مقدار ارسالی نا معتبر است!
 ';
 
 const BOT_MESSAGE__PLEASE_SELECT_CITY = "
@@ -9,7 +9,7 @@ const BOT_MESSAGE__PLEASE_SELECT_CITY = "
 🏘 لطفا شهر خودتو از بین یکی از شهر های زیر انتخاب کن ";
 
 
-const BOT_MESSAGE__SAVED = "
+const BOT_MESSAGE__ENTRY__SAVED = "
 ذخیره شد ✅
 
 ";
