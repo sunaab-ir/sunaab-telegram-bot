@@ -37,7 +37,7 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['single'],
+            'channels' => ['single', 'slack'],
             'ignore_exceptions' => false,
         ],
 
@@ -56,10 +56,10 @@ return [
 
         'slack' => [
             'driver' => 'slack',
-            'url' => env('LOG_SLACK_WEBHOOK_URL'),
+            'url' => 'https://hooks.slack.com/services/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',
             'username' => 'Laravel Log',
             'emoji' => ':boom:',
-            'level' => env('LOG_LEVEL', 'critical'),
+            'level' => 'emergency',
         ],
 
         'papertrail' => [
@@ -99,7 +99,7 @@ return [
 
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
-        ],
+        ]
     ],
 
 ];

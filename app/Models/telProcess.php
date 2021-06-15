@@ -10,7 +10,7 @@ class telProcess extends Model
     use HasFactory;
 
     function _user() {
-        return $this->belongsToMany(telUser::class, 'tel_process_tel_users','tel_process_id')->withPivot(['sub_process', 'process_state', 'tel_process_id', 'tel_user_id']);
+        return $this->belongsToMany(telUser::class, 'tel_process_tel_users','tel_process_id')->withPivot(['sub_process', 'process_state', 'tel_process_id', 'tel_user_id', 'tmp_data', 'process_type']);
     }
     function getUserAttribute() {
         return $this->_user()->first();

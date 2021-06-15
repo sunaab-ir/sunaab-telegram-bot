@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateTelProcessesTable extends Migration
+class CreateWorkCategoriesTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,13 +13,10 @@ class CreateTelProcessesTable extends Migration
      */
     public function up()
     {
-        Schema::create('tel_processes', function (Blueprint $table) {
+        Schema::create('work_categories', function (Blueprint $table) {
             $table->increments('id');
-            $table->string('parent')->nullable();
-            $table->string('process_name');
-            $table->string('process_title')->nullable();
-            $table->string('process_controller');
-            $table->string('process_action');
+            $table->string('name');
+            $table->string('title');
             $table->timestamps();
         });
     }
@@ -31,6 +28,6 @@ class CreateTelProcessesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('tel_processes');
+        Schema::dropIfExists('work_categories');
     }
 }

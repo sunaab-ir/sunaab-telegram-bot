@@ -6,7 +6,11 @@ namespace App\Services\bot;
 
 use App\Models\telProcess;
 use App\Models\telUser;
+use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Facades\Log;
+use Telegram\Bot\Api;
 use Telegram\Bot\Laravel\Facades\Telegram;
 use Telegram\Bot\Objects\User;
 
@@ -28,19 +32,23 @@ class botService
         if (!$Process)
             $Process = $User->currentProcess;
         if (gettype($Process) != "object") {
-            $Process = telProcess::find(((integer)$Process));
+            $Process = telProcess::where('id', ((integer)$Process))->orWhere('process_name', $Process)->first();
             if (!$Process)
                 abort(404, 'the process not found!');
         }
-        $User->Process()->sync([$Process->id]);
-        if ($Update->detectType() == "callback_query") {
+        if (!$User->commandProcess)
+            $User->Process()->attach(BOT_PROCESS__COMMAND, [
+                'process_type' => 'command'
+            ]);
+        $User->Process()->sync([$Process->id, $User->commandProcess->id => [
+            'process_type' => 'command'
+        ]]);
+        if ($Update->detectType() == "callback_query" && !isset($processData['sub_process'])) {
             $data = json_decode($Update->callbackQuery->data, true);
-            print_r($data);
             if (isset($data['sub_process']))
                 $processData['sub_process'] = $data['sub_process'];
         }
         $this->updateProcessData($processData);
-
         $controller = "App\\Http\\Controllers\\bot\\processControllers\\" . $Process->process_controller;
         $action = $Process->process_action;
         $processController = new $controller();
@@ -50,61 +58,144 @@ class botService
             $processController->$action();
     }
 
-    function updateProcessData ($params)
+    function handleCommandProcess ($Process, $entry = null, $processData = [])
+    {
+        $User = request()->botUser;
+        $Update = request()->botUpdate;
+        if (!$Process)
+            $Process = $User->commandProcess;
+        if (gettype($Process) != "object") {
+            $Process = telProcess::where('id', ((integer)$Process))->orWhere('process_name', $Process)->first();
+            if (!$Process)
+                abort(404, 'the process not found!');
+        }
+        if (!$User->commandProcess)
+            $User->Process()->attach(BOT_PROCESS__COMMAND, [
+                'process_type' => 'command'
+            ]);
+        $User->Process()->sync([$Process->id => [
+            'process_type' => 'command'
+        ], $User->currentProcess->id]);
+        if ($Update->detectType() == "callback_query") {
+            $data = json_decode($Update->callbackQuery->data, true);
+            if (isset($data['sub_process']))
+                $processData['sub_process'] = $data['sub_process'];
+        }
+        $this->updateProcessData($processData, true);
+
+        $controller = "App\\Http\\Controllers\\bot\\processControllers\\" . $Process->process_controller;
+        $action = $Process->process_action;
+        $processController = new $controller();
+        if ($entry)
+            $processController->$action($entry);
+        else
+            $processController->$action();
+    }
+
+    function updateProcessData ($params, $isCommand = false)
     {
         if (gettype($params) != "array")
             return;
         $process = request()->botUser->Process();
-        $currentProcess = request()->botUser->currentProcess;
-        if (count($params))
-            $process->updateExistingPivot($currentProcess->id, $params);
+        if (!$isCommand) {
+            $TargetProcess = request()->botUser->currentProcess;
+        } else {
+            $params['process_type'] = 'command';
+            $TargetProcess = request()->botUser->commandProcess;
+        }
+        if (count($params)) {
+            $process->updateExistingPivot($TargetProcess->id, $params);
+        }
     }
 
-    function send ($type, $options = [], $showBack = true, $showMain = true)
+    function send ($type, $options = [], $showBack = true, $deleteMessages = true, $hold = false)
     {
-        print_r($options);
         if (!$type)
             return;
         $currentProcess = $this->botUser->currentProcess;
         if ($currentProcess->parent && $showBack) {
-            if ($currentProcess->parent != BOT_PROCESS__MAIN)
-                $options = $this->appendInlineKeyboardButton($options, [
+            if ($currentProcess->parent != BOT_PROCESS__NAME__MAIN)
+                $options = $this->appendInlineKeyboardButton($options, [[
                     'text' => "بازگشت",
                     'callback_data' => json_encode([
                         'process_id' => $currentProcess->parent
                     ])
-                ]);
+                ]]);
             $options = $this->appendInlineKeyboardButton($options, [
-                'text' => "منوی اصلی",
-                'callback_data' => json_encode([
-                    'process_id' => BOT_PROCESS__MAIN
-                ])
-            ]);
+                [
+                    'text' => "منوی اصلی",
+                    'callback_data' => json_encode([
+                        'process_id' => BOT_PROCESS__MAIN
+                    ])
+                ]]);
         }
-        $options['chat_id'] = $this->botUser->chat_id;
+//        if ($this->botUpdate->getMessage()->chat->type == "private")
+            $options['chat_id'] = $this->botUser->chat_id;
+//        else {
+//            echo "from channel";
+//            $type = 'sendMessage';
+//            $options['chat_id'] = $this->botUpdate->getMessage()->chat->id;
+//        }
         try {
-            resend:
+            resendToTelegram:
             if (in_array($type, ["editMessageText", "editMessageReplyMarkup"])) {
                 $options['message_id'] = $this->botUser->last_bot_message_id;
-                if ($this->botUser->last_bot_message_id < $this->botUser->last_user_message_id) {
+                if ($this->botUser->last_bot_message_id < $this->botUser->last_user_message_id || $hold) {
                     unset($options['message_id']);
                     $type = 'sendMessage';
                 }
             }
             $response = Telegram::$type($options);
-        } catch (\Exception $exception) {
-            if ($exception->getCode() == 400) {
-                $type = 'sendMessage';
-                unset($options['message_id']);
-                $response = Telegram::$type($options);
-            }
-            Log::error($exception->getMessage());
-            if (in_array($exception->getCode(), [29, 28]))
-                goto resend;
         }
-        if ($type != "editMessageText") {
-            $this->botUser->last_bot_message_id = $response->messageId;
-            $this->botUser->save();
+        catch (ConnectException $e) {
+            Log::emergency('VPN Dont Work!');
+            goto resendToTelegram;
+        }
+        catch (\Exception $exception) {
+            Log::channel('slack')->emergency($exception->getMessage());
+            if ($exception->getCode() == 400) {
+                unset($options['message_id']);
+                $this->send('sendMessage', $options);
+            }
+            if (in_array($exception->getCode(), [29, 28])) {
+                goto resendToTelegram;
+            }
+        }
+        if ($type != "editMessageText" && isset($response['message_id'])) {
+            if ($this->botUser->last_bot_message_id && $deleteMessages && (time() - ($this->botUser->last_bot_message_date ?? time() - 1000)) < 172800) {
+                $this->send('deleteMessage', [
+                    'message_id' => $this->botUser->last_bot_message_id
+                ]);
+                $this->botUser->last_bot_message_id = null;
+                $this->botUser->save();
+            }
+            if ($this->botUser->last_user_message_id && (time() - ($this->botUser->last_user_message_date ?? time() - 1000)) < 172800) {
+                $this->send('deleteMessage', [
+                    'message_id' => $this->botUser->last_user_message_id
+                ]);
+                $this->botUser->last_user_message_id = null;
+                $this->botUser->save();
+            }
+            if ($hold) {
+                $this->botUser->last_bot_message_id = null;
+                $this->botUser->save();
+            } else {
+                $this->botUser->last_bot_message_id = $response->messageId;
+                $this->botUser->last_bot_message_date = time();
+                $this->botUser->save();
+            }
+
+        }
+    }
+
+    function sendBase ($type, $options = [])
+    {
+        if (!$type)
+            return;
+        try {
+            Telegram::$type($options);
+        } catch (\Exception $exception) {
+            Log::error($exception->getMessage());
         }
     }
 
@@ -118,9 +209,20 @@ class botService
                 $inlineKeyboard = $replyMarkup['inline_keyboard'];
             }
         }
-        $inlineKeyboard[][] = $button;
+        $inlineKeyboard[] = $button;
         $replyMarkup['inline_keyboard'] = $inlineKeyboard;
         $options['reply_markup'] = json_encode($replyMarkup);
         return $options;
+    }
+
+    function addJsonDataset($dataset, $key, $value) {
+        $ADataset = json_decode($dataset, true);
+        $ADataset[$key] = $value;
+        return json_encode($ADataset, JSON_UNESCAPED_UNICODE);
+    }
+    function removeJsonDataset($dataset, $key) {
+        $ADataset = json_decode($dataset, true);
+        unset($ADataset[$key]);
+        return json_encode($ADataset, JSON_UNESCAPED_UNICODE);
     }
 }

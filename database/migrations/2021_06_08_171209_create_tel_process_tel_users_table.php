@@ -19,6 +19,8 @@ class CreateTelProcessTelUsersTable extends Migration
             $table->unsignedInteger('tel_user_id');
             $table->string('sub_process')->nullable();
             $table->enum('process_state', ['normal', 'input', 'processing'])->default('normal');
+            $table->json('tmp_data')->nullable();
+            $table->string('process_type')->default('normal');
             $table->timestamps();
         });
     }

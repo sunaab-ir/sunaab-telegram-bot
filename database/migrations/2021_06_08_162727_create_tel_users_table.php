@@ -20,8 +20,12 @@ class CreateTelUsersTable extends Migration
             $table->string('last_name')->nullable();
             $table->string('username')->nullable();
             $table->boolean('is_bot')->nullable();
+            $table->boolean('is_admin')->default(0);
             $table->integer('last_bot_message_id');
+            $table->integer('last_bot_message_date')->default(time());
             $table->integer('last_user_message_id');
+            $table->integer('last_user_message_date')->default(time());
+            $table->string('process_type')->default('normal');
             $table->timestamps();
         });
     }

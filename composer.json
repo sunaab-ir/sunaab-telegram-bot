@@ -35,7 +35,8 @@
         },
         "files": [
             "app/Helpers/bot/Processes.php",
-            "app/Helpers/bot/Messages.php"
+            "app/Helpers/bot/Messages.php",
+            "app/Helpers/bot/Vars.php"
         ]
     },
     "scripts": {

@@ -22,32 +22,46 @@ class telBotUpdateMiddleware
     public function handle (Request $request, Closure $next)
     {
         $request->botUpdate = Telegram::getWebhookUpdates();
-        $user = $this->getTelUser($request);
-        $request->botUser = $user;
-        $this->setTrack($request);
+        if (in_array($request->botUpdate->detectType(), [
+            'message',
+            'edited_message',
+            'inline_query',
+            'chosen_inline_result',
+            'callback_query',
+        ])) {
+            $user = $this->getTelUser($request);
+            $request->botUser = $user;
+            $this->setTrack($request);
+        }
         return $next($request);
     }
 
     function getTelUser (Request $request)
     {
-        $isBot =  $request->botUpdate->getMessage()->getFrom()->isBot;
+        if ($request->botUpdate->detectType() == 'callback_query')
+            $from = $request->botUpdate->callbackQuery->from;
+        else
+            $from = $request->botUpdate->getMessage()->getFrom();
+        $isBot =  $from->isBot;
         if ($isBot)
             $user_id = $request->botUpdate->getMessage()->getChat()->id;
         else
-            $user_id = $request->botUpdate->getMessage()->getFrom()->id;
-        $last_user_message_id =  $request->botUpdate->getMessage()->messageId;
+            $user_id = $from->id;
+
+        if ($request->botUpdate->detectType() != 'callback_query')
+            $last_user_message_id =  $request->botUpdate->getMessage()->messageId;
         $user = telUser::with(['Process', 'Profile', 'Tracks'])->find($user_id);
         $maxRetrySave = 3;
         if (!$user) {
-            $chat_id = $request->botUpdate->getMessage()->getChat()->id;
-            if ($isBot) {
+            $chat_id = $from->id;
+            if ($isBot && $request->botUpdate->detectType() != 'callback_query') {
                 $first_name = $request->botUpdate->getMessage()->getChat()->firstName;
                 $last_name = $request->botUpdate->getMessage()->getChat()->lastName ?? "";
-                $username = $request->botUpdate->getMessage()->getChat()->userName ?? "";
+                $username = $request->botUpdate->getMessage()->getChat()->username ?? "";
             }else {
-                $first_name = $request->botUpdate->getMessage()->getFrom()->firstName;
-                $last_name = $request->botUpdate->getMessage()->getFrom()->lastName ?? "";
-                $username = $request->botUpdate->getMessage()->getFrom()->userName ?? "";
+                $first_name = $from->firstName;
+                $last_name = $from->lastName ?? "";
+                $username = $from->username ?? "";
             }
             $user = new telUser();
             $user->user_id = $user_id;
@@ -55,18 +69,31 @@ class telBotUpdateMiddleware
             $user->first_name = $first_name;
             $user->last_name = $last_name;
             $user->username = $username;
+            $user->process_type = 'normal';
             $user->is_bot = $isBot;
-            $user->last_user_message_id = $last_user_message_id;
+            if ($request->botUpdate->detectType() != 'callback_query') {
+                $user->last_user_message_id = $last_user_message_id;
+                $user->last_user_message_date = time();
+            }
             retrySaveUser:
             if ($user->save()) {
                 $user->user_id = $user_id;
-                $user->Process()->sync([1]);
+                $user->Process()->sync([BOT_PROCESS__COMMAND => [
+                    'process_type' => 'command'
+                ], BOT_PROCESS__MAIN]);
+//                die;
+//                $user->Process()->attach(BOT_PROCESS__COMMAND , [
+//                    'process_type' => 'command'
+//                ]);
                 return $user;
             }
             if (--$maxRetrySave > 0)
                 goto retrySaveUser;
         }
-        $user->last_user_message_id = $last_user_message_id;
+        if ($request->botUpdate->detectType() != 'callback_query') {
+            $user->last_user_message_id = $last_user_message_id;
+            $user->last_user_message_date = time();
+        }
         $user->save();
         return $user;
     }

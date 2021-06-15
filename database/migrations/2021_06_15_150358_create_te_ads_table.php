@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateTelUserProfilesTable extends Migration
+class CreateTeAdsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,16 +13,16 @@ class CreateTelUserProfilesTable extends Migration
      */
     public function up()
     {
-        Schema::create('tel_user_profiles', function (Blueprint $table) {
+        Schema::create('te_ads', function (Blueprint $table) {
             $table->increments('id');
-            $table->unsignedInteger('user_id');
-            $table->string('full_name')->nullable();
-            $table->string('mobile_number')->nullable();
+            $table->integer('creator_user_id')->nullable();
+            $table->string('title')->nullable();
+            $table->longText('photo_file_id')->nullable();
+            $table->mediumText('ad_text')->nullable();
             $table->unsignedInteger('county_id')->nullable();
-            $table->unsignedInteger('city_id')->nullable();
             $table->unsignedInteger('village_id')->nullable();
-            $table->boolean('is_manual_worker')->nullable();
-            $table->unsignedInteger('work_category')->nullable();
+            $table->enum('target_sex', ['all', 'man', 'woman'])->default('all');
+            $table->integer('valid_time')->nullable();
             $table->timestamps();
         });
     }
@@ -34,6 +34,6 @@ class CreateTelUserProfilesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('tel_user_profiles');
+        Schema::dropIfExists('te_ads');
     }
 }

@@ -51,10 +51,21 @@ class main extends Controller
                     }
                 }
             }
-
-            $options['text'] .= "از منوی زیر چیزی که میخوای رو انتخاب کن 🔰";
-            $options['reply_markup'] = json_encode([
-                'inline_keyboard' => [
+            $keyboard = [];
+            if ($this->botUser->profile->is_manual_worker && $this->botUser->is_admin) {
+                $keyboard = array_merge($keyboard, [
+                        [
+                            [
+                                'text' => '💵 دنبال کار میگردم',
+                                'callback_data' => json_encode([
+                                    'process_id' => BOT_PROCESS__NAME__WORKER
+                                ])
+                            ]
+                        ]
+                    ]
+                );
+            }
+            $keyboard = array_merge($keyboard, [
                     [
                         [
                             'text' => '📄 مشخصات من',
@@ -79,9 +90,20 @@ class main extends Controller
                         ]
                     ]
                 ]
+            );
+            if ($this->botUser->is_admin)
+                $keyboard[][] = [
+                    'text' => '📍مدیریت',
+                    'callback_data' => json_encode([
+                        'process_id' => BOT_PROCESS__ADMIN_PANEL
+                    ]),
+                ];
+            $options['text'] .= "از منوی زیر چیزی که میخوای رو انتخاب کن 🔰";
+            $options['reply_markup'] = json_encode([
+                'inline_keyboard' => $keyboard
             ]);
 
-            $this->botService->send('editMessageText', $options);
+            $this->botService->send('editMessageText', $options, true);
         }
     }
 
@@ -122,9 +144,9 @@ class main extends Controller
         switch ($currentSubProcess) {
             default:
             {
-                $fullName = $this->botUser->profile->full_name;
+                $fullName = $this->botUser->profile->full_name ?? 'بدون نام';
                 $userType = $this->botUser->profile->is_manual_worker ? "👷🏻‍♂️ کارگر" : "👨🏻‍🌾 کشاورز";
-                $cityName = (City::find($this->botUser->profile->city_id))->name;
+                $cityName = (City::find($this->botUser->profile->city_id))->name ?? 'انتخاب نشده';
                 $isUserRural = !empty($this->botUser->profile->village_id);
                 $villageName = "";
                 if ($isUserRural) {
@@ -144,7 +166,15 @@ class main extends Controller
 
 🔵 نام روستا: $villageName";
                 }
+                if ($this->botUser->profile->is_manual_worker) {
+                    $workCategoryName = $this->botUser->profile->workCategory->title;
+                    $options['text'] .= "
 
+🔵 نوع کارگر: $workCategoryName";
+                }
+                $options['text'] .= '
+
+اگه میخوای مشخصاتت رو ویرایش کنی کافیه روی دکمه پایین که نوشته "📝ویرایش مشخصات" بزنی 🙂';
                 $options['reply_markup'] = json_encode([
                     'inline_keyboard' => [
                         [
@@ -163,6 +193,7 @@ class main extends Controller
             case 'get_fullName':
             {
                 $options['text'] .= "
+
                 لطفا نام و نام خانوادگیت رو ارسال کن";
                 $this->botService->send('sendMessage', $options, false);
                 $this->botService->updateProcessData([
@@ -172,7 +203,7 @@ class main extends Controller
             }
             case 'get_fullName_input':
             {
-                if ($this->botUpdate->detectType() == 'message') {
+                if ($this->botUpdate->detectType() == 'message' && !$this->botUpdate->hasCommand()) {
                     if (strlen($this->botUpdate->getMessage()->text) > 5) {
                         $this->botUser->profile->full_name = $this->botUpdate->getMessage()->text;
                         $this->botUser->profile->save();
@@ -188,7 +219,7 @@ class main extends Controller
                     $this->botService->send('sendMessage', [
                         'text' => '❌ مقدار ارسالی نا معتبره، لطفا دقت کن
 مثال: مهدی باقری'
-                    ]);
+                    ], false);
                 }
                 break;
             }
@@ -219,10 +250,66 @@ class main extends Controller
                     $isWorker = (json_decode($this->botUpdate->callbackQuery->data, true))['is_manual_worker'];
                     $this->botUser->profile->is_manual_worker = $isWorker;
                     $this->botUser->profile->save();
-                    $this->botService->handleProcess(null, [
-                        'entry' => 'custom_message',
-                        'message' => 'تا اینجا حله 😄
+                    if ($isWorker) {
+                        $this->botService->handleProcess(null, [
+                            'entry' => 'saved'
+                        ], [
+                            'sub_process' => 'work_category'
+                        ]);
+                    } else {
+                        $this->botService->handleProcess(null, [
+                            'entry' => 'custom_message',
+                            'message' => 'تا اینجا حله 😄
                         '
+                        ], [
+                            'sub_process' => 'get_county'
+                        ]);
+                    }
+                } else {
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'invalid'
+                    ],
+                        [
+                            'sub_process' => 'is_manual_worker'
+                        ]);
+                }
+                break;
+            }
+            case 'work_category':
+            {
+                $options['text'] .= 'لطفا مشخص کن که چه نوع کارگری هستی، اگه کارگر ساده هستی روی "🔨  کارگر ساده " و اگه کار های فنی انجام میدی لطفا "🛠 فنی کار " رو انتخاب کن 🙂';
+                $options['reply_markup'] = json_encode([
+                    'inline_keyboard' => [
+                        [
+                            [
+                                'text' => '🔨  کارگر ساده',
+                                'callback_data' => json_encode([
+                                    'work_category' => BOT__WORK_CATEGORY__SIMPLE_WORKER
+                                ])
+                            ],
+                            [
+                                'text' => '🛠 فنی کار',
+                                'callback_data' => json_encode([
+                                    'work_category' => BOT__WORK_CATEGORY__TECHNICIAN
+                                ])
+                            ]
+                        ]
+                    ]
+                ]);
+                $this->botService->send('editMessageText', $options, false);
+                $this->botService->updateProcessData([
+                    'sub_process' => 'work_category_select'
+                ]);
+                break;
+            }
+            case 'work_category_select':
+            {
+                if ($this->botUpdate->detectType() == 'callback_query') {
+                    $workCategory = (json_decode($this->botUpdate->callbackQuery->data, true))['work_category'];
+                    $this->botUser->profile->work_category = $workCategory;
+                    $this->botUser->profile->save();
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'saved'
                     ], [
                         'sub_process' => 'get_county'
                     ]);
@@ -231,7 +318,7 @@ class main extends Controller
                         'entry' => 'invalid'
                     ],
                         [
-                            'sub_process' => 'is_manual_worker'
+                            'sub_process' => 'work_category'
                         ]);
                 }
                 break;
@@ -288,7 +375,7 @@ class main extends Controller
                             'text' => 'در بروز رسانی های بعدی شهر های بیشتری در اختیار شما قرار می گیرد 😊
 
                             در حال بازگشت به منو...'
-                        ]);
+                        ], false);
                         sleep(2);
                         $this->botService->handleProcess(null, null,
                             [
@@ -298,6 +385,15 @@ class main extends Controller
                         $this->botUser->profile->county_id = $data['county_id'];
                         $this->botUser->profile->city_id = $data['city_id'];
                         $this->botUser->profile->save();
+//                        $villages = [22472, 68190, 2748, 7291, 53470, 69601, 71997, 58434];
+//                        $selectedCounty = County::find($data['county_id']);
+//                        $villages = $selectedCounty->villages()->whereIn('id', $villages)->get();
+//                        if (!count($villages)) {
+//                            $this->botService->handleProcess(null, null, [
+//                                'sub_process' => 'get_mobile'
+//                            ]);
+//                            return;
+//                        }
                         $this->botService->handleProcess(null, [
                             'entry' => 'custom_message',
                             'message' => '🤏دیگه چیزی نمونده
@@ -341,8 +437,8 @@ class main extends Controller
             case 'check_rural_select' :
             {
                 if ($this->botUpdate->detectType() == 'callback_query') {
-                    $data = json_decode($this->botUpdate->callbackQuery->data, true);
-                    if ($data['is_village']) {
+                    $callback_data = json_decode($this->botUpdate->callbackQuery->data, true);
+                    if ($callback_data['is_village']) {
                         $this->botService->handleProcess(null, null, [
                             'sub_process' => 'get_village'
                         ]);
@@ -377,18 +473,23 @@ class main extends Controller
                     ])];
                 }
                 $keyboardLayout = array_values(array_chunk($villagesKeyboard, 2));
-                $options['text'] .= 'لطفا روستای محل زندگیت رو انتخاب کن
-
-⚠️ اگه روستای محل زندگیت توی این لیست نیست لطفا از روی متن آبی زیر بزن و اسم روستا رو بنویس و بفرست
-/profile_village_send_name';
+                $options['text'] .= '🏡 لطفا روستای محل زندگیت رو انتخاب کن';
                 $options['reply_markup'] = json_encode([
                     'inline_keyboard' =>
-                        array_merge($keyboardLayout, [[
-                                ['text' => 'انتخاب مجدد شهر', 'callback_data' => json_encode([
-                                    'type' => 'navigate',
-                                    'sub_process' => 'get_county'
-                                ])
-                                ]]]
+                        array_merge($keyboardLayout, [
+                                [
+                                    ['text' => '🙋🏼 روستای من در این لیست نیست', 'callback_data' => json_encode([
+                                        'type' => 'navigate',
+                                        'sub_process' => 'take_new_village'
+                                    ])]
+                                ],
+                                [
+                                    ['text' => 'انتخاب مجدد شهر', 'callback_data' => json_encode([
+                                        'type' => 'navigate',
+                                        'sub_process' => 'get_county'
+                                    ])]
+                                ]
+                            ]
                         )
 
                 ], JSON_UNESCAPED_UNICODE);
@@ -403,6 +504,7 @@ class main extends Controller
                 if ($this->botUpdate->detectType() == 'callback_query') {
                     $data = json_decode($this->botUpdate->callbackQuery->data, true);
                     if ($data['type'] == 'item') {
+
                         if (isset($data['village_id'])) {
                             $this->botUser->profile->village_id = $data['village_id'];
                             $this->botUser->profile->save();
@@ -414,12 +516,8 @@ class main extends Controller
                         } else
                             goto isInvalidSelectedVillage;
                     } else if ($data['type'] == 'navigate') {
-                        $this->botService->handleProcess(null, [
-                            'entry' => 'custom_message',
-                            'message' => 'انتخاب مجدد شهر
-                            '
-                        ], [
-                            'sub_process' => 'get_county'
+                        $this->botService->handleProcess(null, null, [
+                            'sub_process' => $data['sub_process']
                         ]);
                     }
                 } else {
@@ -430,6 +528,80 @@ class main extends Controller
                         [
                             'sub_process' => 'get_village'
                         ]);
+                }
+                break;
+            }
+            case "take_new_village":
+            {
+                $options['text'] .= 'حالا اسم روستایی که زندگی میکنی رو لطفا بفرست 😊
+
+⚠️ توجه داشته باش که اسم روستایی که وارد میکنی باید تحت  پوشش شهری باشه که انتخاب کردی';
+                $options['reply_markup'] = json_encode([
+                    'inline_keyboard' => [
+                        [
+                            [
+                                'text' => 'انتخاب مجدد شهر',
+                                'callback_data' => json_encode([
+                                    'type' => 'navigate',
+                                    'sub_process' => 'get_county'
+                                ])
+                            ]
+                        ]
+                    ]
+                ]);
+                $this->botService->send('editMessageText', $options, false);
+                $this->botService->updateProcessData([
+                    'sub_process' => 'take_new_village_input'
+                ]);
+                break;
+            }
+            case "take_new_village_input":
+            {
+                if ($this->botUpdate->detectType() == 'message') {
+                    if ($this->botUpdate->getMessage()->detectType() != 'text')
+                        goto invalidTakeVillage;
+                    $villageName = $this->botUpdate->getMessage()->text;
+                    $village = $this->botUser->profile->county->villages()->where('name', 'like', "%$villageName%")->first();
+                    if (!$village) {
+                        $this->botService->send('sendMessage', [
+                            'text' => '🤷🏻‍♂️ روستایی با این اسم پیدا نشد، لطفا نام روستا رو بررسی کن و دوباره بفرست، ممکنه شهر رو هم اشتباه انتخاب کرده باشی 🧐',
+                            'reply_markup' => json_encode([
+                                'inline_keyboard' => [
+                                    [
+                                        [
+                                            'text' => 'انتخاب دوباره شهر',
+                                            'callback_data' => json_encode([
+                                                'sub_process' => 'get_county'
+                                            ])
+                                        ]
+                                    ]
+                                ]
+                            ])
+                        ], false);
+                        return;
+                    }
+                    $this->botUser->profile->village_id = $village->id;
+                    $this->botUser->profile->save();
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'custom_message',
+                        'message' => '🏡 روستا با موفقیت ذخیره شد 😃
+'
+                    ],
+                        [
+                            'sub_process' => 'get_mobile'
+                        ]);
+                } else if ($this->botUpdate->detectType() == 'callback_query') {
+                    $callback_data = json_decode($this->botUpdate->callbackQuery->data, true);
+                    $this->botService->handleProcess(null, null, [
+                        'sub_process' => $callback_data['sub_process']
+                    ]);
+                } else {
+                    invalidTakeVillage:
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'invalid'
+                    ], [
+                        'sub_process' => 'take_new_village'
+                    ]);
                 }
                 break;
             }
@@ -479,7 +651,6 @@ class main extends Controller
         $sub_process = $this->botUser->currentProcess->pivot->sub_process;
         $send = false;
         $back = false;
-        $main = false;
         $options = [];
         $options['text'] = "";
         $cancelButton = true;
@@ -510,6 +681,14 @@ class main extends Controller
                         'sub_process' => 'manualWorker'
                     ])
                 ];
+                if ($this->botUser->profile->is_manual_worker) {
+                    $keyboard[][] = [
+                        'text' => '✏️ ویرایش نوع کارگری (ساده یا فنی کار)',
+                        'callback_data' => json_encode([
+                            'sub_process' => 'work_category'
+                        ])
+                    ];
+                }
                 $keyboard[][] = [
                     'text' => '✏️ ویرایش موقعیت مکانی',
                     'callback_data' => json_encode([
@@ -563,11 +742,7 @@ class main extends Controller
                         $this->botUser->profile->county_id = $data['county_id'];
                         $this->botUser->profile->city_id = $data['city_id'];
                         $this->botUser->profile->save();
-                        $this->botService->handleProcess(null, [
-                            'entry' => 'custom_message',
-                            'message' => '🤏دیگه چیزی نمونده
-                            '
-                        ],
+                        $this->botService->handleProcess(null, null,
                             [
                                 'sub_process' => 'check_rural'
                             ]);
@@ -645,18 +820,23 @@ class main extends Controller
                     ])];
                 }
                 $keyboardLayout = array_values(array_chunk($villagesKeyboard, 2));
-                $options['text'] .= 'لطفا روستای محل زندگیت رو انتخاب کن
-
-⚠️ اگه روستای محل زندگیت توی این لیست نیست لطفا از روی متن آبی زیر بزن و اسم روستا رو بنویس و بفرست
-/profile_village_send_name';
+                $options['text'] .= '🏡 لطفا روستای محل زندگیت رو انتخاب کن';
                 $options['reply_markup'] = json_encode([
                     'inline_keyboard' =>
-                        array_merge($keyboardLayout, [[
-                                ['text' => 'انتخاب مجدد شهر', 'callback_data' => json_encode([
-                                    'type' => 'navigate',
-                                    'sub_process' => 'get_county'
-                                ])
-                                ]]]
+                        array_merge($keyboardLayout, [
+                                [
+                                    ['text' => '🙋🏼 روستای من در این لیست نیست', 'callback_data' => json_encode([
+                                        'type' => 'navigate',
+                                        'sub_process' => 'take_new_village'
+                                    ])]
+                                ],
+                                [
+                                    ['text' => 'انتخاب مجدد شهر', 'callback_data' => json_encode([
+                                        'type' => 'navigate',
+                                        'sub_process' => 'get_county'
+                                    ])]
+                                ]
+                            ]
                         )
 
                 ]);
@@ -702,7 +882,80 @@ class main extends Controller
                 }
                 break;
             }
-            case 'fullName': {
+            case "take_new_village":
+            {
+                $options['text'] .= 'حالا اسم روستایی که زندگی میکنی رو لطفا بفرست 😊
+
+⚠️ توجه داشته باش که اسم روستایی که وارد میکنی باید تحت  پوشش شهری باشه که انتخاب کردی';
+                $options['reply_markup'] = json_encode([
+                    'inline_keyboard' => [
+                        [
+                            [
+                                'text' => 'انتخاب مجدد شهر',
+                                'callback_data' => json_encode([
+                                    'type' => 'navigate',
+                                    'sub_process' => 'location'
+                                ])
+                            ]
+                        ]
+                    ]
+                ]);
+                $this->botService->send('editMessageText', $options, false);
+                $this->botService->updateProcessData([
+                    'sub_process' => 'take_new_village_input'
+                ]);
+                break;
+            }
+            case "take_new_village_input":
+            {
+                if ($this->botUpdate->detectType() == 'message') {
+                    if ($this->botUpdate->getMessage()->detectType() != 'text')
+                        goto invalidTakeVillage;
+                    $villageName = $this->botUpdate->getMessage()->text;
+                    $village = $this->botUser->profile->county->villages()->where('name', 'like', "%$villageName%")->first();
+                    if (!$village) {
+                        $this->botService->send('sendMessage', [
+                            'text' => '🤷🏻‍♂️ روستایی با این اسم پیدا نشد، لطفا نام روستا رو بررسی کن و دوباره بفرست، ممکنه شهر رو هم اشتباه انتخاب کرده باشی 🧐',
+                            'reply_markup' => json_encode([
+                                'inline_keyboard' => [
+                                    [
+                                        [
+                                            'text' => 'انتخاب دوباره شهر',
+                                            'callback_data' => json_encode([
+                                                'sub_process' => 'location'
+                                            ])
+                                        ]
+                                    ]
+                                ]
+                            ])
+                        ], false);
+                        return;
+                    }
+                    $this->botUser->profile->village_id = $village->id;
+                    $this->botUser->profile->save();
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'saved'
+                    ],
+                        [
+                            'sub_process' => ''
+                        ]);
+                } else if ($this->botUpdate->detectType() == 'callback_query') {
+                    $callback_data = json_decode($this->botUpdate->callbackQuery->data, true);
+                    $this->botService->handleProcess(null, null, [
+                        'sub_process' => $callback_data['sub_process']
+                    ]);
+                } else {
+                    invalidTakeVillage:
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'invalid'
+                    ], [
+                        'sub_process' => 'take_new_village'
+                    ]);
+                }
+                break;
+            }
+            case 'fullName':
+            {
                 $options['text'] .= "
                 لطفا نام و نام خانوادگیت رو ارسال کن";
                 $this->botService->updateProcessData([
@@ -760,11 +1013,18 @@ class main extends Controller
                     $isWorker = (json_decode($this->botUpdate->callbackQuery->data, true))['is_manual_worker'];
                     $this->botUser->profile->is_manual_worker = $isWorker;
                     $this->botUser->profile->save();
-                    $this->botService->handleProcess(null, [
-                        'entry' => 'saved'
-                    ], [
-                        'sub_process' => ''
-                    ]);
+                    if ($isWorker)
+                        $this->botService->handleProcess(null, [
+                            'entry' => 'saved'
+                        ], [
+                            'sub_process' => 'work_category'
+                        ]);
+                    else
+                        $this->botService->handleProcess(null, [
+                            'entry' => 'saved'
+                        ], [
+                            'sub_process' => ''
+                        ]);
                 } else {
                     $this->botService->handleProcess(null, [
                         'entry' => 'invalid'
@@ -775,17 +1035,65 @@ class main extends Controller
                 }
                 break;
             }
+            case 'work_category':
+            {
+                $options['text'] .= 'لطفا مشخص کن که چه نوع کارگری هستی، اگه کارگر ساده هستی روی "🔨  کارگر ساده " و اگه کار های فنی انجام میدی لطفا "🛠 فنی کار " رو انتخاب کن 🙂';
+                $options['reply_markup'] = json_encode([
+                    'inline_keyboard' => [
+                        [
+                            [
+                                'text' => '🔨  کارگر ساده',
+                                'callback_data' => json_encode([
+                                    'work_category' => BOT__WORK_CATEGORY__SIMPLE_WORKER
+                                ])
+                            ],
+                            [
+                                'text' => '🛠 فنی کار',
+                                'callback_data' => json_encode([
+                                    'work_category' => BOT__WORK_CATEGORY__TECHNICIAN
+                                ])
+                            ]
+                        ]
+                    ]
+                ]);
+                $send = true;
+                $this->botService->updateProcessData([
+                    'sub_process' => 'work_category_select'
+                ]);
+                break;
+            }
+            case 'work_category_select':
+            {
+                if ($this->botUpdate->detectType() == 'callback_query') {
+                    $workCategory = (json_decode($this->botUpdate->callbackQuery->data, true))['work_category'];
+                    $this->botUser->profile->work_category = $workCategory;
+                    $this->botUser->profile->save();
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'saved'
+                    ], [
+                        'sub_process' => ''
+                    ]);
+                } else {
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'invalid'
+                    ],
+                        [
+                            'sub_process' => 'work_category'
+                        ]);
+                }
+                break;
+            }
         }
         if ($cancelButton) {
-            $options = $this->botService->appendInlineKeyboardButton($options, [
+            $options = $this->botService->appendInlineKeyboardButton($options, [[
                 'text' => '❌ انصراف',
                 'callback_data' => json_encode([
                     'sub_process' => ""
                 ])
-            ]);
+            ]]);
         }
         if ($send)
-            $this->botService->send('editMessageText', $options, $back, $main);
+            $this->botService->send('editMessageText', $options, $back);
     }
 
     function about ()
