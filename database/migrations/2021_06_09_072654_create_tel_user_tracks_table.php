@@ -21,7 +21,7 @@ class CreateTelUserTracksTable extends Migration
             $table->string('sub_process')->nullable();
             $table->enum('type', ['in', ['out']])->default('in');
             $table->string('entry_type');
-            $table->string('user_input')->nullable();
+            $table->longText('user_input')->nullable();
             $table->timestamps();
         });
     }

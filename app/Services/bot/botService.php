@@ -4,6 +4,7 @@
 namespace App\Services\bot;
 
 
+use App\Models\telBotMessage;
 use App\Models\telProcess;
 use App\Models\telUser;
 use GuzzleHttp\Exception\ClientException;
@@ -108,7 +109,7 @@ class botService
         }
     }
 
-    function send ($type, $options = [], $showBack = true, $deleteMessages = true, $hold = false)
+    function send ($type, $options = [], $showBack = true, $deleteMessages = null, $hold = null)
     {
         if (!$type)
             return;
@@ -130,7 +131,7 @@ class botService
                 ]]);
         }
 //        if ($this->botUpdate->getMessage()->chat->type == "private")
-            $options['chat_id'] = $this->botUser->chat_id;
+        $options['chat_id'] = $this->botUser->chat_id;
 //        else {
 //            echo "from channel";
 //            $type = 'sendMessage';
@@ -146,12 +147,10 @@ class botService
                 }
             }
             $response = Telegram::$type($options);
-        }
-        catch (ConnectException $e) {
+        } catch (ConnectException $e) {
             Log::emergency('VPN Dont Work!');
             goto resendToTelegram;
-        }
-        catch (\Exception $exception) {
+        } catch (\Exception $exception) {
             Log::channel('slack')->emergency($exception->getMessage());
             if ($exception->getCode() == 400) {
                 unset($options['message_id']);
@@ -162,21 +161,48 @@ class botService
             }
         }
         if ($type != "editMessageText" && isset($response['message_id'])) {
-            if ($this->botUser->last_bot_message_id && $deleteMessages && (time() - ($this->botUser->last_bot_message_date ?? time() - 1000)) < 172800) {
+            if ($this->botUser->last_bot_message_id && !$deleteMessages && (time() - ($this->botUser->last_bot_message_date ?? time() - 1000)) < 172800) {
                 $this->send('deleteMessage', [
                     'message_id' => $this->botUser->last_bot_message_id
                 ]);
                 $this->botUser->last_bot_message_id = null;
                 $this->botUser->save();
+            } else if ($this->botUser->last_bot_message_id && $deleteMessages) {
+                if (gettype($deleteMessages) != 'array')
+                    $deleteMessages = [];
+                if (!isset($deleteMessages['message_type']))
+                    $deleteMessages['message_type'] = 'bot_message_dont_delete';
+                $deleteMessages['message_id'] = $this->botUser->last_bot_message_id;
+                $deleteMessages['chat_id'] = $this->botUser->chat_id;
+                $deleteMessages['time'] = time();
+                telBotMessage::create($deleteMessages);
             }
-            if ($this->botUser->last_user_message_id && (time() - ($this->botUser->last_user_message_date ?? time() - 1000)) < 172800) {
+            if ($this->botUser->last_user_message_id && !$deleteMessages && (time() - ($this->botUser->last_user_message_date ?? time() - 1000)) < 172800) {
                 $this->send('deleteMessage', [
                     'message_id' => $this->botUser->last_user_message_id
                 ]);
                 $this->botUser->last_user_message_id = null;
                 $this->botUser->save();
+            } else if ($this->botUser->last_user_message_id && $deleteMessages) {
+                if (gettype($deleteMessages) != 'array')
+                    $deleteMessages = [];
+                if (!isset($deleteMessages['message_type']))
+                    $deleteMessages['message_type'] = 'user_message_dont_delete';
+                $deleteMessages['message_id'] = $this->botUser->last_user_message_id;
+                $deleteMessages['chat_id'] = $this->botUser->chat_id;
+                $deleteMessages['time'] = time();
+                telBotMessage::create($deleteMessages);
             }
             if ($hold) {
+                echo "holding";
+                if (gettype($hold) != 'array')
+                    $hold = [];
+                if (!isset($hold['message_type']))
+                    $hold['message_type'] = 'hold';
+                $hold['message_id'] = $response->messageId;
+                $hold['chat_id'] = $this->botUser->chat_id;
+                $hold['time'] = time();
+                telBotMessage::create($hold);
                 $this->botUser->last_bot_message_id = null;
                 $this->botUser->save();
             } else {
@@ -184,7 +210,7 @@ class botService
                 $this->botUser->last_bot_message_date = time();
                 $this->botUser->save();
             }
-
+            return $response;
         }
     }
 
@@ -193,7 +219,7 @@ class botService
         if (!$type)
             return;
         try {
-            Telegram::$type($options);
+            return Telegram::$type($options);
         } catch (\Exception $exception) {
             Log::error($exception->getMessage());
         }
@@ -215,14 +241,39 @@ class botService
         return $options;
     }
 
-    function addJsonDataset($dataset, $key, $value) {
+    function addJsonDataset ($dataset, $key, $value)
+    {
         $ADataset = json_decode($dataset, true);
         $ADataset[$key] = $value;
         return json_encode($ADataset, JSON_UNESCAPED_UNICODE);
     }
-    function removeJsonDataset($dataset, $key) {
+
+    function removeJsonDataset ($dataset, $key)
+    {
         $ADataset = json_decode($dataset, true);
         unset($ADataset[$key]);
         return json_encode($ADataset, JSON_UNESCAPED_UNICODE);
+    }
+
+    function removeChatHistory ($where = null)
+    {
+        if ($where)
+            $messages = telBotMessage::where($where)->get();
+        else
+            $messages = telBotMessage::all();
+        foreach ($messages as $message) {
+            if ((time() - $message->time) < 172800) {
+                try {
+                    if ($this->sendBase('deleteMessage', [
+                        'chat_id' => $message->chat_id,
+                        'message_id' => $message->message_id
+                    ])) {
+                        $message->delete();
+                    }
+                }catch (\Exception $exception) {
+                    echo $exception->getMessage() . "\n";
+                }
+            }
+        }
     }
 }

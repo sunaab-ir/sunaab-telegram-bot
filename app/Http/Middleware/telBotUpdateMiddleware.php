@@ -90,6 +90,11 @@ class telBotUpdateMiddleware
             if (--$maxRetrySave > 0)
                 goto retrySaveUser;
         }
+        if (!count($user->Process)) {
+            $user->Process()->sync([BOT_PROCESS__COMMAND => [
+                'process_type' => 'command'
+            ], BOT_PROCESS__MAIN]);
+        }
         if ($request->botUpdate->detectType() != 'callback_query') {
             $user->last_user_message_id = $last_user_message_id;
             $user->last_user_message_date = time();

@@ -23,6 +23,7 @@ class CreateTeAdsTable extends Migration
             $table->unsignedInteger('village_id')->nullable();
             $table->enum('target_sex', ['all', 'man', 'woman'])->default('all');
             $table->integer('valid_time')->nullable();
+            $table->enum('state', [0,1,2,3,4])->default(0);
             $table->timestamps();
         });
     }

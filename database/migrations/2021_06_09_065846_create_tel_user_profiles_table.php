@@ -17,6 +17,7 @@ class CreateTelUserProfilesTable extends Migration
             $table->increments('id');
             $table->unsignedInteger('user_id');
             $table->string('full_name')->nullable();
+            $table->enum('sex', ['man', 'woman'])->nullable();
             $table->string('mobile_number')->nullable();
             $table->unsignedInteger('county_id')->nullable();
             $table->unsignedInteger('city_id')->nullable();

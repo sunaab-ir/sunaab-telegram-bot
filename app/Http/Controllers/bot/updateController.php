@@ -39,7 +39,9 @@ class updateController extends Controller
                     return;
                 if (!isset($callbackData['source'])) {
                     if (isset($callbackData['process_id']))
-                        $this->botService->handleProcess($callbackData['process_id']);
+                        $this->botService->handleProcess($callbackData['process_id'],
+                            isset($callbackData['ent']) ? ['entry' => $callbackData['ent']] : null
+                        );
                     else
                         goto handleCurrentProcess;
                 } else {
