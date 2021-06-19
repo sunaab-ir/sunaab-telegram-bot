@@ -117,14 +117,14 @@ class botService
         if ($currentProcess->parent && $showBack) {
             if ($currentProcess->parent != BOT_PROCESS__NAME__MAIN)
                 $options = $this->appendInlineKeyboardButton($options, [[
-                    'text' => "بازگشت",
+                    'text' => "🔙 بازگشت",
                     'callback_data' => json_encode([
                         'process_id' => $currentProcess->parent
                     ])
                 ]]);
             $options = $this->appendInlineKeyboardButton($options, [
                 [
-                    'text' => "منوی اصلی",
+                    'text' => "🚩 منوی اصلی",
                     'callback_data' => json_encode([
                         'process_id' => BOT_PROCESS__MAIN
                     ])
@@ -140,8 +140,8 @@ class botService
         try {
             resendToTelegram:
             if (in_array($type, ["editMessageText", "editMessageReplyMarkup"])) {
-                $options['message_id'] = $this->botUser->last_bot_message_id;
-                if ($this->botUser->last_bot_message_id < $this->botUser->last_user_message_id || $hold) {
+                $options['message_id'] = $this->botUser->last_bot_message_id ?? 0;
+                if ($options['message_id'] < $this->botUser->last_user_message_id) {
                     unset($options['message_id']);
                     $type = 'sendMessage';
                 }
@@ -151,18 +151,20 @@ class botService
             Log::emergency('VPN Dont Work!');
             goto resendToTelegram;
         } catch (\Exception $exception) {
-            Log::channel('slack')->emergency($exception->getMessage());
+            Log::error($exception->getCode() . " -------------- " . $exception->getMessage());
             if ($exception->getCode() == 400) {
                 unset($options['message_id']);
-                $this->send('sendMessage', $options);
+                $type = 'sendMessage';
+                goto resendToTelegram;
             }
             if (in_array($exception->getCode(), [29, 28])) {
                 goto resendToTelegram;
             }
         }
-        if ($type != "editMessageText" && isset($response['message_id'])) {
+        if (in_array($type, ["sendMessage"]) && isset($response['message_id']) || (isset($response['message_id']) && $hold)) {
             if ($this->botUser->last_bot_message_id && !$deleteMessages && (time() - ($this->botUser->last_bot_message_date ?? time() - 1000)) < 172800) {
-                $this->send('deleteMessage', [
+                $this->sendBase('deleteMessage', [
+                    'chat_id' => $this->botUser->chat_id,
                     'message_id' => $this->botUser->last_bot_message_id
                 ]);
                 $this->botUser->last_bot_message_id = null;
@@ -178,7 +180,8 @@ class botService
                 telBotMessage::create($deleteMessages);
             }
             if ($this->botUser->last_user_message_id && !$deleteMessages && (time() - ($this->botUser->last_user_message_date ?? time() - 1000)) < 172800) {
-                $this->send('deleteMessage', [
+                $this->sendBase('deleteMessage', [
+                    'chat_id' => $this->botUser->chat_id,
                     'message_id' => $this->botUser->last_user_message_id
                 ]);
                 $this->botUser->last_user_message_id = null;
@@ -194,7 +197,6 @@ class botService
                 telBotMessage::create($deleteMessages);
             }
             if ($hold) {
-                echo "holding";
                 if (gettype($hold) != 'array')
                     $hold = [];
                 if (!isset($hold['message_type']))
@@ -219,9 +221,9 @@ class botService
         if (!$type)
             return;
         try {
-            return Telegram::$type($options);
+            Telegram::$type($options);
         } catch (\Exception $exception) {
-            Log::error($exception->getMessage());
+            Log::error($exception);
         }
     }
 

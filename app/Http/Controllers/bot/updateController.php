@@ -31,7 +31,6 @@ class updateController extends Controller
     }
 
     function handleNormalUpdate($request) {
-
         if (in_array($request->botUpdate->detectType(), ['message', 'edited_message', 'callback_query'])) {
             if ($request->botUpdate->detectType() == 'callback_query') {
                 $callbackData = json_decode($request->botUpdate->callbackQuery->data, true);

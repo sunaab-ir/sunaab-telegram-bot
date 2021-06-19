@@ -16,7 +16,8 @@ const BOT_PROCESS__NAME__ADMIN_PANEL = 'admin_panel';
 const BOT_PROCESS__COMMAND = 7;
 const BOT_PROCESS__NAME__COMMAND = 'command';
 const BOT_PROCESS__NAME__WORKER = 'worker';
-const BOT_PROCESS__ADMIN_SEND_AD = 'admin_send_ad';
+const BOT_PROCESS__ADMIN_ADD_AD = 'admin_add_ad';
+const BOT_PROCESS__ADMIN_ADS = 'admin_ads';
 
 
 
