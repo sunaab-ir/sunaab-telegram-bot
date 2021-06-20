@@ -152,6 +152,7 @@ class botService
             goto resendToTelegram;
         } catch (\Exception $exception) {
             Log::error($exception->getCode() . " -------------- " . $exception->getMessage());
+            echo $exception->getCode() . " ------\n-------- " . $exception->getMessage() . "\n\n";
             if ($exception->getCode() == 400) {
                 unset($options['message_id']);
                 $type = 'sendMessage';
@@ -221,7 +222,7 @@ class botService
         if (!$type)
             return;
         try {
-            Telegram::$type($options);
+            return Telegram::$type($options);
         } catch (\Exception $exception) {
             Log::error($exception);
         }
@@ -263,6 +264,7 @@ class botService
             $messages = telBotMessage::where($where)->get();
         else
             $messages = telBotMessage::all();
+
         foreach ($messages as $message) {
             if ((time() - $message->time) < 172800) {
                 try {

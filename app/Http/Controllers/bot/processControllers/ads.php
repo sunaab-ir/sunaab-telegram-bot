@@ -860,6 +860,7 @@ class ads extends Controller
                         $hold = [
                           'message_type' => 'ad_display_ad'
                         ];
+                        $options['text'] .= $options['caption'];
                         if (strlen($options['caption']) <= 1010 && $ad->photo_file_id) {
                             $options['photo'] = $ad->photo_file_id;
                             $this->botService->send('sendPhoto', $options, $back, $dontDeleteMessage, $hold);
