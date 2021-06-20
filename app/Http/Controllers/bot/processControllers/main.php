@@ -27,7 +27,6 @@ class main extends Controller
     function main ($params = null)
     {
         if (!$this->botUser->profile) {
-            $this->botUser->Profile()->save(new telUserProfile());
             $this->botService->handleProcess(BOT_PROCESS__PROFILE, [
                 'entry' => 'newUser'
             ], [
@@ -205,12 +204,17 @@ class main extends Controller
             {
                 if ($this->botUpdate->detectType() == 'message' && !$this->botUpdate->hasCommand()) {
                     if (strlen($this->botUpdate->getMessage()->text) > 5) {
-                        $this->botUser->profile->full_name = $this->botUpdate->getMessage()->text;
-                        $this->botUser->profile->save();
+                        $this->botService->updateProcessData([
+                            'tmp_data' => $this->botService->addJsonDataset(
+                                $this->botUser->currentProcess->pivot->tmp_data,
+                                'full_name',
+                                $this->botUpdate->getMessage()->text
+                            )
+                        ]);
                         $this->botService->handleProcess(null, [
                             'entry' => 'saved'
                         ], [
-                            'sub_process' => 'is_manual_worker'
+                            'sub_process' => 'get_sex'
                         ]);
                     } else
                         goto invalidFullNameData;
@@ -220,6 +224,59 @@ class main extends Controller
                         'text' => '❌ مقدار ارسالی نا معتبره، لطفا دقت کن
 مثال: مهدی باقری'
                     ], false);
+                }
+                break;
+            }
+            case 'get_sex':
+            {
+                $options['text'] .= "\n\n🙎🏻‍♂️🙍🏻‍♀️ لطفا جنسیت خود را مشخص کنید";
+                $options['reply_markup'] = json_encode([
+                    'inline_keyboard' => [
+                        [
+                            [
+                                'text' => '🙍🏻‍♀️ خانم',
+                                'callback_data' => json_encode([
+                                    's' => 'woman'
+                                ])
+                            ],
+                            [
+                                'text' => '🙎🏻‍♂️ آقا',
+                                'callback_data' => json_encode([
+                                    's' => 'man'
+                                ])
+                            ]
+                        ]
+                    ]
+                ]);
+                $this->botService->send('sendMessage', $options, false);
+                $this->botService->updateProcessData([
+                    'sub_process' => 'get_sex_select'
+                ]);
+                break;
+            }
+            case 'get_sex_select':
+            {
+                if ($this->botUpdate->detectType() == 'callback_query') {
+                    $sex = (json_decode($this->botUpdate->callbackQuery->data, true))['s'];
+                    $this->botService->updateProcessData([
+                        'tmp_data' => $this->botService->addJsonDataset(
+                            $this->botUser->currentProcess->pivot->tmp_data,
+                            'sex',
+                            $sex
+                        )
+                    ]);
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'saved'
+                    ], [
+                        'sub_process' => 'is_manual_worker'
+                    ]);
+                } else {
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'invalid'
+                    ],
+                        [
+                            'sub_process' => 'get_sex'
+                        ]);
                 }
                 break;
             }
@@ -248,8 +305,13 @@ class main extends Controller
             {
                 if ($this->botUpdate->detectType() == 'callback_query') {
                     $isWorker = (json_decode($this->botUpdate->callbackQuery->data, true))['is_manual_worker'];
-                    $this->botUser->profile->is_manual_worker = $isWorker;
-                    $this->botUser->profile->save();
+                    $this->botService->updateProcessData([
+                        'tmp_data' => $this->botService->addJsonDataset(
+                            $this->botUser->currentProcess->pivot->tmp_data,
+                            'is_manual_worker',
+                            $isWorker
+                        )
+                    ]);
                     if ($isWorker) {
                         $this->botService->handleProcess(null, [
                             'entry' => 'saved'
@@ -306,8 +368,13 @@ class main extends Controller
             {
                 if ($this->botUpdate->detectType() == 'callback_query') {
                     $workCategory = (json_decode($this->botUpdate->callbackQuery->data, true))['work_category'];
-                    $this->botUser->profile->work_category = $workCategory;
-                    $this->botUser->profile->save();
+                    $this->botService->updateProcessData([
+                        'tmp_data' => $this->botService->addJsonDataset(
+                            $this->botUser->currentProcess->pivot->tmp_data,
+                            'work_category',
+                            $workCategory
+                        )
+                    ]);
                     $this->botService->handleProcess(null, [
                         'entry' => 'saved'
                     ], [
@@ -382,18 +449,20 @@ class main extends Controller
                                 'sub_process' => 'get_county'
                             ]);
                     } else {
-                        $this->botUser->profile->county_id = $data['county_id'];
-                        $this->botUser->profile->city_id = $data['city_id'];
-                        $this->botUser->profile->save();
-//                        $villages = [22472, 68190, 2748, 7291, 53470, 69601, 71997, 58434];
-//                        $selectedCounty = County::find($data['county_id']);
-//                        $villages = $selectedCounty->villages()->whereIn('id', $villages)->get();
-//                        if (!count($villages)) {
-//                            $this->botService->handleProcess(null, null, [
-//                                'sub_process' => 'get_mobile'
-//                            ]);
-//                            return;
-//                        }
+                        $this->botService->updateProcessData([
+                            'tmp_data' => $this->botService->addJsonDataset(
+                                $this->botUser->currentProcess->pivot->tmp_data,
+                                'county_id',
+                                $data['county_id']
+                            )
+                        ]);
+                        $this->botService->updateProcessData([
+                            'tmp_data' => $this->botService->addJsonDataset(
+                                $this->botUser->currentProcess->pivot->tmp_data,
+                                'city_id',
+                                $data['city_id']
+                            )
+                        ]);
                         $this->botService->handleProcess(null, [
                             'entry' => 'custom_message',
                             'message' => '🤏دیگه چیزی نمونده
@@ -462,7 +531,10 @@ class main extends Controller
             }
             case 'get_village':
             {
-                $selectedCounty = County::find($this->botUser->profile->county_id);
+                $processTmpData = json_decode($this->botUser->currentProcess->pivot->tmp_data, true);
+
+                $county_id = $processTmpData['county_id'];
+                $selectedCounty = County::find($county_id);
                 $villages = [22472, 68190, 2748, 7291, 53470, 69601, 71997, 58434];
                 $villages = $selectedCounty->villages()->whereIn('id', $villages)->get();
                 $villagesKeyboard = [];
@@ -506,8 +578,13 @@ class main extends Controller
                     if ($data['type'] == 'item') {
 
                         if (isset($data['village_id'])) {
-                            $this->botUser->profile->village_id = $data['village_id'];
-                            $this->botUser->profile->save();
+                            $this->botService->updateProcessData([
+                                'tmp_data' => $this->botService->addJsonDataset(
+                                    $this->botUser->currentProcess->pivot->tmp_data,
+                                    'village_id',
+                                    $data['village_id']
+                                )
+                            ]);
                             $this->botService->handleProcess(null, [
                                 'entry' => 'saved'
                             ], [
@@ -580,8 +657,13 @@ class main extends Controller
                         ], false);
                         return;
                     }
-                    $this->botUser->profile->village_id = $village->id;
-                    $this->botUser->profile->save();
+                    $this->botService->updateProcessData([
+                        'tmp_data' => $this->botService->addJsonDataset(
+                            $this->botUser->currentProcess->pivot->tmp_data,
+                            'village_id',
+                            $village->id
+                        )
+                    ]);
                     $this->botService->handleProcess(null, [
                         'entry' => 'custom_message',
                         'message' => '🏡 روستا با موفقیت ذخیره شد 😃
@@ -607,7 +689,7 @@ class main extends Controller
             }
             case "get_mobile":
             {
-                $options['text'] .= '📱جهت بهره مندی از خدمات و مزایا، لطفا  شماره خود را از طریق دکمه پایین صفحه ارسال نمایید';
+                $options['text'] .= "📱جهت بهره مندی از خدمات و مزایا، لطفا شماره خودتو از طریق دکمه پایین صفحه ارسال کن\n\nهمچنین میتونی شماره رو بنویسی و بفرستی ولی روش اول پیشنهاد میشه 😊";
                 $options['reply_markup'] = json_encode([
                     'keyboard' => [
                         [
@@ -628,12 +710,36 @@ class main extends Controller
             case 'get_mobile_input':
             {
                 if ($this->botUpdate->getMessage()->detectType() == 'contact') {
-                    $this->botUser->profile->mobile_number = $this->botUpdate->getMessage()->contact->phoneNumber;
-                    $this->botUser->profile->save();
-                    $this->botService->handleProcess(BOT_PROCESS__MAIN, [
-                        'entry' => 'newUserCompleteProfile'
+                    $this->botService->updateProcessData([
+                        'tmp_data' => $this->botService->addJsonDataset(
+                            $this->botUser->currentProcess->pivot->tmp_data,
+                            'mobile_number',
+                            $this->botUpdate->getMessage()->contact->phoneNumber
+                        )
                     ]);
-                } else {
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'custom_message',
+                        'message' => "شماره موبایل ذخیره شد\n"
+                    ], [
+                        'sub_process' => 'finish'
+                    ]);
+                }
+                else if ($this->botUpdate->getMessage()->detectType() == 'text' && preg_match("/^[+\u0600-\u06FF\s0-9]+\w{10}$/", $this->botUpdate->getMessage()->text)) {
+                    $this->botService->updateProcessData([
+                        'tmp_data' => $this->botService->addJsonDataset(
+                            $this->botUser->currentProcess->pivot->tmp_data,
+                            'mobile_number',
+                            $this->botUpdate->getMessage()->text
+                        )
+                    ]);
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'custom_message',
+                        'message' => "شماره موبایل ذخیره شد\n"
+                    ], [
+                        'sub_process' => 'finish'
+                    ]);
+                }
+                else {
                     $this->botService->handleProcess(null, [
                         'entry' => 'invalid'
                     ],
@@ -641,6 +747,26 @@ class main extends Controller
                             'sub_process' => 'get_mobile'
                         ]);
                 }
+                break;
+            }
+            case 'finish':
+            {
+                $processTmpData = json_decode($this->botUser->currentProcess->pivot->tmp_data, true);
+                $profile = new telUserProfile();
+                $profile->full_name = $processTmpData['full_name'];
+                $profile->sex = $processTmpData['sex'];
+                $profile->is_manual_worker = $processTmpData['is_manual_worker'];
+                if (isset($processTmpData['work_category']))
+                    $profile->work_category = $processTmpData['work_category'];
+                $profile->county_id = $processTmpData['county_id'];
+                $profile->city_id = $processTmpData['city_id'];
+                if (isset($processTmpData['village_id']))
+                    $profile->village_id = $processTmpData['village_id'];
+                $profile->mobile_number = $processTmpData['mobile_number'];
+                $this->botUser->Profile()->save($profile);
+                $this->botService->handleProcess(BOT_PROCESS__MAIN, [
+                    'entry' => 'newUserCompleteProfile'
+                ]);
                 break;
             }
         }

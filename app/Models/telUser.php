@@ -10,6 +10,7 @@ class telUser extends Model
     use HasFactory;
 
     protected $primaryKey = "user_id";
+//    protected $with = ['Profile'];
 
     function Process ()
     {

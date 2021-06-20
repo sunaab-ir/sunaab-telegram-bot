@@ -8,6 +8,7 @@ use App\Models\County;
 use App\Models\teAd;
 use App\Models\telUser;
 use App\Models\Village;
+use App\Services\bot\adService;
 use App\Services\bot\botService;
 use Illuminate\Http\Request;
 
@@ -16,12 +17,14 @@ class ads extends Controller
     protected $botUser;
     protected $botUpdate;
     protected $botService;
+    protected $adService;
 
     public function __construct ()
     {
         $this->botUser = \request()->botUser;
         $this->botUpdate = \request()->botUpdate;
         $this->botService = new botService();
+        $this->adService = new adService();
     }
 
     function addAd ($entry = null)
@@ -914,7 +917,23 @@ class ads extends Controller
             }
             case 'ad_actions': {
                 if ($this->botUpdate->detectType() == 'callback_query') {
-
+                    $callbackData = json_decode($this->botUpdate->callbackQuery->data, true);
+                    $ad = teAd::find($callbackData['aid']);
+                    switch ($callbackData['ty']){
+                        case 'c': {
+                            $ad->state = BOT__AD__STATE__CONFIRMED;
+                            break;
+                        }
+                        case 'cs': {
+                            $this->adService->sendAd($ad->id);
+                            break;
+                        }
+                        case 'r': {
+                            $ad->state = BOT__AD__STATE__REJECTED;
+                            break;
+                        }
+                    }
+                    $ad->save();
                 }else {
                     $options['text'] = '🚫 مقدار ارسالی معتبر نیست، لطفا از دکمه های آگهی استفاده کنید';
                     $options['reply_markup'] = json_encode([
@@ -976,4 +995,5 @@ class ads extends Controller
     {
 
     }
+
 }
