@@ -5,6 +5,7 @@ namespace App\Http\Controllers\bot\processControllers;
 use App\Http\Controllers\Controller;
 use App\Models\City;
 use App\Models\County;
+use App\Models\sentAd;
 use App\Models\teAd;
 use App\Models\telUser;
 use App\Models\Village;
@@ -58,6 +59,58 @@ class ads extends Controller
         switch ($sub_process) {
             default:
             {
+                $options['text'] .= 'لطفا مشخص کنید برای چه نوع کارگر قصد ایجاد آگهی دارید';
+                $options['reply_markup'] = json_encode([
+                    'inline_keyboard' => [
+                        [
+                            [
+                                'text' => '🔨  کارگر ساده',
+                                'callback_data' => json_encode([
+                                    'work_category' => BOT__WORK_CATEGORY__SIMPLE_WORKER
+                                ])
+                            ],
+                            [
+                                'text' => '🛠 فنی کار',
+                                'callback_data' => json_encode([
+                                    'work_category' => BOT__WORK_CATEGORY__TECHNICIAN
+                                ])
+                            ]
+                        ]
+                    ]
+                ]);
+                $send = true;
+                $this->botService->updateProcessData([
+                    'sub_process' => 'work_category_select'
+                ]);
+                break;
+            }
+            case 'work_category_select':
+            {
+                if ($this->botUpdate->detectType() == 'callback_query') {
+                    $workCategory = (json_decode($this->botUpdate->callbackQuery->data, true))['work_category'];
+                    $this->botService->updateProcessData([
+                        'tmp_data' => $this->botService->addJsonDataset(
+                            $this->botUser->currentProcess->pivot->tmp_data,
+                            'work_category',
+                            $workCategory
+                        )
+                    ]);
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'saved'
+                    ], [
+                        'sub_process' => 'ad_photo'
+                    ]);
+                } else {
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'invalid'
+                    ],
+                        [
+                            'sub_process' => 'work_category'
+                        ]);
+                }
+                break;
+            }
+            case 'ad_photo': {
                 $options['text'] .= '🖼 لطفا اگر آگهی دارای تصویر است تصویر آگهی را ارسال کنید
 در غیر این صورت روی دکمه "تصویر ندارد" ضربه بزنید';
 
@@ -405,7 +458,7 @@ class ads extends Controller
                         ]);
                     } else {
                         $this->botService->handleProcess(null, null, [
-                            'sub_process' => 'valid_time'
+                            'sub_process' => 'ad_worker_count'
                         ]);
                     }
                 } else {
@@ -460,13 +513,102 @@ class ads extends Controller
 
 '
                     ], [
-                        'sub_process' => 'valid_time'
+                        'sub_process' => 'ad_worker_count'
                     ]);
                 } else {
                     $this->botService->handleProcess(null, [
                         'entry' => 'invalid'
                     ], [
                         'sub_process' => 'ad_village_ask'
+                    ]);
+                }
+                break;
+            }
+            case 'ad_worker_count':
+            {
+                $options['text'] .= "2️⃣ - 9️⃣ لطفا تعداد افرادی که برای کار خود نیاز دارید را انتخاب کنید
+
+همچنین میتوانید تعداد را به عدد ارسال کنید، مانند (2).";
+
+                $options['reply_markup'] = json_encode([
+                    'inline_keyboard' => [
+                        [
+                            [
+                                'text' => '1 نفر',
+                                'callback_data' => json_encode([
+                                    'co' => 1
+                                ])
+                            ],
+                            [
+                                'text' => '2 نفر',
+                                'callback_data' => json_encode([
+                                    'co' => 2
+                                ])
+                            ],
+                            [
+                                'text' => '4 نفر',
+                                'callback_data' => json_encode([
+                                    'co' => 4
+                                ])
+                            ],
+                            [
+                                'text' => '6 نفر',
+                                'callback_data' => json_encode([
+                                    'co' => 6
+                                ])
+                            ]
+                        ]
+                    ]
+                ]);
+
+                $send = true;
+
+                $this->botService->updateProcessData([
+                    'sub_process' => 'ad_worker_count_select'
+                ]);
+                break;
+            }
+            case 'ad_worker_count_select':
+            {
+                if (
+                    $this->botUpdate->detectType() == 'callback_query'
+                ) {
+                    $callback_data = json_decode($this->botUpdate->callbackQuery->data, true);
+                    $this->botService->updateProcessData([
+                        'tmp_data' => $this->botService->addJsonDataset(
+                            $this->botUser->currentProcess->pivot->tmp_data,
+                            'ad_worker_count',
+                            $callback_data['co']
+                        )
+                    ]);
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'saved'
+                    ], [
+                        'sub_process' => 'valid_time'
+                    ]);
+                } elseif (
+                    $this->botUpdate->detectType() == 'message' &&
+                    $this->botUpdate->getMessage()->detectType() == 'text' &&
+                    preg_match("/^[0-9]{1,2}$/", $this->botUpdate->getMessage()->text)
+                ) {
+                    $this->botService->updateProcessData([
+                        'tmp_data' => $this->botService->addJsonDataset(
+                            $this->botUser->currentProcess->pivot->tmp_data,
+                            'ad_worker_count',
+                            $this->botUpdate->getMessage()->text
+                        )
+                    ]);
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'saved'
+                    ], [
+                        'sub_process' => 'valid_time'
+                    ]);
+                }
+                else {
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'invalid'
+                    ], [
+                        'sub_process' => 'ad_worker_count'
                     ]);
                 }
                 break;
@@ -527,6 +669,8 @@ class ads extends Controller
                 $tel_ad->village_id = $ad_data['ad_village'] ?? null;
                 $tel_ad->target_sex = $ad_data['sex'];
                 $tel_ad->valid_time = $ad_data['ad_valid_time'];
+                $tel_ad->worker_count = $ad_data['ad_worker_count'] ?? 1;
+                $tel_ad->work_category = $ad_data['work_category'] ?? BOT__WORK_CATEGORY__SIMPLE_WORKER;
                 $tel_ad->save();
                 $this->botService->handleProcess(BOT_PROCESS__NAME__ADMIN_PANEL, [
                     'entry' => BOT_PROCESS__ADMIN_ADD_AD,
@@ -693,14 +837,14 @@ class ads extends Controller
                 if ($adsCount % 10 != 0)
                     $pagesCount++;
                 $where = [
-                  ['state', '=', BOT__AD__STATE__RESERVED]
+                    ['state', '=', BOT__AD__STATE__RESERVED]
                 ];
                 if (isset($entry['srch'])) {
                     $page = 0;
                     $search = $entry['srch'];
                     $where[] = ['title', 'like', "%$search%"];
                     $ads = teAd::where($where)->orWhere('id', $search)->skip($page * 10)->take(10)->get();
-                }else
+                } else
                     $ads = teAd::where($where)->skip($page * 10)->take(10)->get();
                 $this->botService->updateProcessData([
                     'tmp_data' => $this->botService->addJsonDataset(
@@ -713,16 +857,16 @@ class ads extends Controller
                 if (!count($ads)) {
                     $options['text'] = '❌ آگهی ای با این عنوان یا شناسه یافت نشد، لطفا مجدد سعی کنید';
                     $options['reply_markup'] = json_encode([
-                       'inline_keyboard' => [
-                           [
-                               [
-                                   'text' => 'بازگشت به آگهی ها',
-                                   'callback_data' => json_encode([
-                                       'sub_process' => ''
-                                   ])
-                               ]
-                           ]
-                       ]
+                        'inline_keyboard' => [
+                            [
+                                [
+                                    'text' => 'بازگشت به آگهی ها',
+                                    'callback_data' => json_encode([
+                                        'sub_process' => ''
+                                    ])
+                                ]
+                            ]
+                        ]
                     ]);
                     goto ads_1_default_skipToSend;
                 }
@@ -861,14 +1005,14 @@ class ads extends Controller
                             ]
                         ], JSON_UNESCAPED_UNICODE);
                         $hold = [
-                          'message_type' => 'ad_display_ad'
+                            'message_type' => 'ad_display_ad'
                         ];
                         $options['text'] .= $options['caption'];
                         if (strlen($options['caption']) <= 1010 && $ad->photo_file_id) {
                             $options['photo'] = $ad->photo_file_id;
                             $this->botService->send('sendPhoto', $options, $back, $dontDeleteMessage, $hold);
-                        }else {
-                            $options['text'] .= $options['caption'];
+                        } else {
+                            $hold = false;
                             $send = true;
                             $cancelButton = false;
                         }
@@ -898,15 +1042,13 @@ class ads extends Controller
                             }
                         }
                     }
-                }
-                elseif ($this->botUpdate->detectType() == 'message' && $this->botUpdate->getMessage()->detectType() == 'text') {
+                } elseif ($this->botUpdate->detectType() == 'message' && $this->botUpdate->getMessage()->detectType() == 'text') {
                     $this->botService->handleProcess(null, [
                         'srch' => $this->botUpdate->getMessage()->text
                     ], [
                         'sub_process' => ''
                     ]);
-                }
-                else {
+                } else {
                     $this->botService->handleProcess(null, [
                         'entry' => 'invalid'
                     ], [
@@ -915,26 +1057,47 @@ class ads extends Controller
                 }
                 break;
             }
-            case 'ad_actions': {
+            case 'ad_actions':
+            {
                 if ($this->botUpdate->detectType() == 'callback_query') {
                     $callbackData = json_decode($this->botUpdate->callbackQuery->data, true);
                     $ad = teAd::find($callbackData['aid']);
-                    switch ($callbackData['ty']){
-                        case 'c': {
+                    switch ($callbackData['ty']) {
+                        case 'c':
+                        {
                             $ad->state = BOT__AD__STATE__CONFIRMED;
+                            $params = [
+                                'entry' => 'custom_message',
+                                'message' => "✅ آگهی تأیید شد\n\n"
+                            ];
                             break;
                         }
-                        case 'cs': {
-                            $this->adService->sendAd($ad->id);
+                        case 'cs':
+                        {
+                            if ($this->adService->sendAd($ad->id)) {
+                                $ad->state = BOT__AD__STATE__SENT;
+                            }
+                            $params = [
+                                'entry' => 'custom_message',
+                                'message' => "✅ آگهی تأیید و ارسال شد\n\n"
+                            ];
                             break;
                         }
-                        case 'r': {
+                        case 'r':
+                        {
                             $ad->state = BOT__AD__STATE__REJECTED;
+                            $params = [
+                                'entry' => 'custom_message',
+                                'message' => "✅ آگهی رد شد\n\n"
+                            ];
                             break;
                         }
                     }
                     $ad->save();
-                }else {
+                    $this->botService->handleProcess(null, $params, [
+                        'sub_process' => ''
+                    ]);
+                } else {
                     $options['text'] = '🚫 مقدار ارسالی معتبر نیست، لطفا از دکمه های آگهی استفاده کنید';
                     $options['reply_markup'] = json_encode([
                         'inline_keyboard' => [
@@ -994,6 +1157,66 @@ class ads extends Controller
     function ads_6 ($entry = null)
     {
 
+    }
+
+    function handleUserAdActions ($a)
+    {
+        $callbackData = json_decode($this->botUpdate->callbackQuery->data, true);
+        switch ($a) {
+            case 'ua':
+            { // user agree ad
+                $sentRecord = $this->botUser->receiveAds()->where('ad_id', $callbackData['aid'])->first();
+                $sentRecord->state = BOT__SENT_AD__STATE__AGREED;
+                $sentRecord->save();
+                $this->checkAdWorkerCount($callbackData['aid']);
+                $adCreator = telUser::find($sentRecord->ad->creator_user_id);
+                $adCreatorUserID = $adCreator->user_id;
+
+                $options['chat_id'] = $adCreator->chat_id;
+                $options['text'] = "🔔 اطلاعیه آگهی شما\n\n";
+                $options['text'] .= "کاربر: " . $adCreator->profile->full_name . " | کد کاربری ($adCreatorUserID) آگهی کاری شما با پذیرفت\n";
+
+                $this->botService->sendBase('sendMessage', $options, false, true);
+                break;
+            }
+        }
+    }
+
+    function checkAdWorkerCount($aid) {
+        $ad = teAd::find($aid);
+
+        $agreedAds = $ad->sents()->where('state', BOT__SENT_AD__STATE__AGREED)->get();
+        if (count($agreedAds) >= $ad->worker_count) {
+            $ad->state = BOT__AD__STATE__PROMISED;
+            foreach ($ad->sents as $sent) {
+                $this->botService->sendBase('editMessageReplyMarkup', [
+                   'chat_id' => $sent->chat_id,
+                    'message_id' => $sent->message_id,
+                    'reply_markup' => json_encode([
+                        'inline_keyboard' => [
+                            [
+                                [
+                                    'text' => '⛔️ تکمیل شد ⛔️',
+                                    'callback_data' => 'null'
+                                ]
+                            ],
+                            [
+                                [
+                                    'text' => '🗑 پاک کردن آگهی',
+                                    'callback_data' => json_encode([
+                                        'src' => 'ad',
+                                        'a' => 'del',
+                                        'aid' => $ad->id
+                                    ])
+                                ]
+                            ]
+                        ]
+                    ])
+                ]);
+            }
+        }
+
+        $ad->save();
     }
 
 }

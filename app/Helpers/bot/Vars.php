@@ -36,5 +36,14 @@ const  BOT__AD__STATE__REJECTED = 6;
 
 // ads state</>
 
+// sent ad state
+
+const  BOT__SENT_AD__STATE__PENDING = 1;
+const  BOT__SENT_AD__STATE__AGREED = 2;
+const  BOT__SENT_AD__STATE__REJECTED = 3;
+const  BOT__SENT_AD__STATE__EXPIRED = 4;
+
+// sent ad state</>
+
 
 ///// Votes</>

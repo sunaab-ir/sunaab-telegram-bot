@@ -47,4 +47,8 @@ class telUser extends Model
     function ads() {
         return $this->hasMany(teAd::class, 'creator_user_id', 'user_id');
     }
+
+    function receiveAds() {
+        return $this->hasMany(sentAd::class, 'user_id', 'user_id');
+    }
 }

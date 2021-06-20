@@ -26,7 +26,7 @@ class botService
         $this->botUpdate = request()->botUpdate;
     }
 
-    function handleProcess ($Process, $Params = null, $processData = [])
+    function handleProcess ($Process = null, $Params = null, $processData = [])
     {
         $User = request()->botUser;
         $Update = request()->botUpdate;
@@ -217,15 +217,35 @@ class botService
         }
     }
 
-    function sendBase ($type, $options = [])
+    function sendBase ($type, $options = [], $async = false, $reset = false)
     {
         if (!$type)
             return;
+        $response = null;
         try {
-            return Telegram::$type($options);
+            resendSendBaseToTelegram:
+            if ($async)
+                $response = Telegram::setAsyncRequest(true)->$type($options);
+            else
+                $response = Telegram::$type($options);
         } catch (\Exception $exception) {
             Log::error($exception);
+            if ($type == 'sendPhoto') {
+                $type = 'sendMessage';
+                goto resendSendBaseToTelegram;
+            }
         }
+        if (in_array($type, ["sendMessage"]) && isset($response['message_id'])) {
+            if ($reset) {
+                $this->botUser->last_bot_message_id = null;
+                $this->botUser->save();
+            } else {
+                $this->botUser->last_bot_message_id = $response->messageId;
+                $this->botUser->last_bot_message_date = time();
+                $this->botUser->save();
+            }
+        }
+        return $response;
     }
 
     function appendInlineKeyboardButton ($options, $button)
@@ -274,7 +294,7 @@ class botService
                     ])) {
                         $message->delete();
                     }
-                }catch (\Exception $exception) {
+                } catch (\Exception $exception) {
                     echo $exception->getMessage() . "\n";
                 }
             }

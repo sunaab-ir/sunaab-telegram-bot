@@ -45,13 +45,12 @@ class main extends Controller
                                 'remove_keyboard' => true
                             ])
                         ]);
-                        $options['text'] .= 'خب حالا که پروفایلت رو تکمیل کردی وقتشه که بریم سراغ قسمت های باحال 😃😉
-                        ';
+                        $options['text'] .= "خب حالا که پروفایلت رو تکمیل کردی وقتشه که بریم سراغ قسمت های باحال 😃😉\n\n";
                     }
                 }
             }
             $keyboard = [];
-            if ($this->botUser->profile->is_manual_worker && $this->botUser->is_admin) {
+            if ($this->botUser->profile->is_manual_worker) {
                 $keyboard = array_merge($keyboard, [
                         [
                             [
@@ -465,8 +464,7 @@ class main extends Controller
                         ]);
                         $this->botService->handleProcess(null, [
                             'entry' => 'custom_message',
-                            'message' => '🤏دیگه چیزی نمونده
-                            '
+                            'message' => "🤏دیگه چیزی نمونده\n"
                         ],
                             [
                                 'sub_process' => 'check_rural'

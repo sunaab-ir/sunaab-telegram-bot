@@ -24,6 +24,8 @@ class CreateTeAdsTable extends Migration
             $table->enum('target_sex', ['all', 'man', 'woman'])->default('all');
             $table->integer('valid_time')->nullable();
             $table->enum('state', [1,2,3,4,5,6])->default(1);
+            $table->integer('worker_count')->default(1);
+            $table->unsignedInteger('work_category')->nullable();
             $table->timestamps();
         });
     }

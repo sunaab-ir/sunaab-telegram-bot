@@ -17,9 +17,11 @@ class CreateSentAdsTable extends Migration
             $table->increments('id');
             $table->unsignedInteger('ad_id');
             $table->unsignedInteger('user_id');
+            $table->unsignedInteger('chat_id');
             $table->integer('message_id');
             $table->integer('sent_time');
-            $table->integer('state');
+            $table->integer('state')->default(1);
+            $table->enum('type', ['message', 'media'])->default('message');
             $table->timestamps();
         });
     }

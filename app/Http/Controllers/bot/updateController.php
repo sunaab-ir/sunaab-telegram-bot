@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\bot;
 
+use App\Http\Controllers\bot\processControllers\ads;
 use App\Http\Controllers\bot\processControllers\command;
 use App\Http\Controllers\Controller;
 use App\Models\telUser;
@@ -11,6 +12,8 @@ use Illuminate\Http\Request;
 class updateController extends Controller
 {
     protected $botService;
+    protected $botUpdate;
+    protected $botUser;
 
     public function __construct ()
     {
@@ -18,10 +21,11 @@ class updateController extends Controller
     }
 
     public function update(Request $request) {
+        $this->botUpdate = $request->botUpdate;
+        $this->botUser = $request->botUser;
         if ($request->botUpdate->detectType()) {
             if ($request->botUpdate->hasCommand() && $request->botUpdate->getMessage()->entities[0]['offset'] == 0) {
                 $this->handleCommands($request);
-
             } else {
                 if ($request->botUser->process_type != 'normal')
                     $this->handleCommands($request);
@@ -33,21 +37,8 @@ class updateController extends Controller
     function handleNormalUpdate($request) {
         if (in_array($request->botUpdate->detectType(), ['message', 'edited_message', 'callback_query'])) {
             if ($request->botUpdate->detectType() == 'callback_query') {
-                $callbackData = json_decode($request->botUpdate->callbackQuery->data, true);
-                if (!$callbackData)
-                    return;
-                if (!isset($callbackData['source'])) {
-                    if (isset($callbackData['process_id']))
-                        $this->botService->handleProcess($callbackData['process_id'],
-                            isset($callbackData['ent']) ? ['entry' => $callbackData['ent']] : null
-                        );
-                    else
-                        goto handleCurrentProcess;
-                } else {
-                    $this->handleCallbackSource();
-                }
+                $this->handleCallbackQuery();
             }else {
-                handleCurrentProcess:
                 $this->botService->handleProcess($request->botUser->currentProcess);
             }
         }else {
@@ -126,5 +117,33 @@ class updateController extends Controller
             $this->botService->handleCommandProcess(null, $commandValue, [
                 'sub_process' => $commandName
             ]);
+    }
+
+
+
+    function handleCallbackQuery() {
+        $callbackData = json_decode($this->botUpdate->callbackQuery->data, true);
+        if (!$callbackData)
+            return;
+        if (isset($callbackData['src'])) {
+            switch ($callbackData['src']) {
+                case 'ad': {
+                    if (isset($callbackData['a'])) {
+                        $adController = new ads();
+                        $adController->handleUserAdActions($callbackData['a']);
+                    }
+                    break;
+                }
+            }
+        }else if (!isset($callbackData['source'])) {
+            if (isset($callbackData['process_id']))
+                $this->botService->handleProcess($callbackData['process_id'],
+                    isset($callbackData['ent']) ? ['entry' => $callbackData['ent']] : null
+                );
+            else
+                $this->botService->handleProcess();
+        } else {
+            $this->handleCallbackSource();
+        }
     }
 }

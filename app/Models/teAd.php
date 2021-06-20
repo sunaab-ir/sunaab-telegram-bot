@@ -13,4 +13,8 @@ class teAd extends Model
     function creator() {
         return $this->belongsTo(telUser::class, 'creator_user_id', 'user_id');
     }
+
+    function sents() {
+        return $this->hasMany(sentAd::class, 'ad_id');
+    }
 }
