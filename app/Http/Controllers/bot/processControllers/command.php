@@ -37,4 +37,10 @@ class command extends Controller
             }
         }
     }
+
+    function start() {
+        $this->botService->handleProcess(BOT_PROCESS__MAIN, null, [
+            'sub_process' => ''
+        ]);
+    }
 }

@@ -33,16 +33,16 @@ class admin extends Controller
 
         if ($entry) {
             switch ($entry['entry']) {
-                case BOT_PROCESS__ADMIN_ADD_AD:
+                case BOT_PROCESS__ADD_AD:
                 {
                     if (isset($entry['s']) && $entry['s'])
-                    $options['text'] .= '✅ آگهی با موفقیت ذخیره شد و آماده ارسال است، برای ارسال آگهی میتوانید به قسمت "آگهی های من" مراجعه نمایید
+                    $options['text'] .= '✅ آگهی با موفقیت ذخیره شد و آماده ارسال است، برای ارسال آگهی میتوانید به قسمت "آگهی ها" مراجعه نمایید
 
 ';
                     else
                         goto adminPanelDefaultText;
                     $this->botService->removeChatHistory([
-                        ['meta_data', 'like', '%"sub_process":"' . BOT_PROCESS__ADMIN_ADD_AD . '"%']
+                        ['meta_data', 'like', '%"sub_process":"' . BOT_PROCESS__ADD_AD . '"%']
                     ]);
                     break;
                 }
@@ -67,13 +67,13 @@ class admin extends Controller
                         [
                             'text' => "ثبت آگهی 📃",
                             'callback_data' => json_encode([
-                                'process_id' => BOT_PROCESS__ADMIN_ADD_AD
+                                'process_id' => BOT_PROCESS__ADD_AD
                             ], JSON_UNESCAPED_UNICODE)
                         ],
                         [
                             'text' => "📃 آگهی ها",
                             'callback_data' => json_encode([
-                                'process_id' => BOT_PROCESS__ADMIN_ADS
+                                'process_id' => BOT_PROCESS__ADS
                             ], JSON_UNESCAPED_UNICODE)
                         ]
                     ]

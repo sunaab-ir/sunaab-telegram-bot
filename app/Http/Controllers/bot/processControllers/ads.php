@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\bot\processControllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\chatLog;
 use App\Models\City;
 use App\Models\County;
 use App\Models\sentAd;
@@ -36,7 +37,7 @@ class ads extends Controller
         $back = false;
         $dontDeleteMessage = [
             'meta_data' => json_encode([
-                'sub_process' => BOT_PROCESS__ADMIN_ADD_AD
+                'sub_process' => BOT_PROCESS__ADD_AD
             ])
         ];;
         $hold = false;
@@ -110,7 +111,8 @@ class ads extends Controller
                 }
                 break;
             }
-            case 'ad_photo': {
+            case 'ad_photo':
+            {
                 $options['text'] .= '🖼 لطفا اگر آگهی دارای تصویر است تصویر آگهی را ارسال کنید
 در غیر این صورت روی دکمه "تصویر ندارد" ضربه بزنید';
 
@@ -603,8 +605,7 @@ class ads extends Controller
                     ], [
                         'sub_process' => 'valid_time'
                     ]);
-                }
-                else {
+                } else {
                     $this->botService->handleProcess(null, [
                         'entry' => 'invalid'
                     ], [
@@ -673,7 +674,7 @@ class ads extends Controller
                 $tel_ad->work_category = $ad_data['work_category'] ?? BOT__WORK_CATEGORY__SIMPLE_WORKER;
                 $tel_ad->save();
                 $this->botService->handleProcess(BOT_PROCESS__NAME__ADMIN_PANEL, [
-                    'entry' => BOT_PROCESS__ADMIN_ADD_AD,
+                    'entry' => BOT_PROCESS__ADD_AD,
                     's' => true
                 ]);
                 break;
@@ -685,7 +686,7 @@ class ads extends Controller
                 'text' => '❌ انصراف',
                 'callback_data' => json_encode([
                     'process_id' => BOT_PROCESS__NAME__ADMIN_PANEL,
-                    'ent' => BOT_PROCESS__ADMIN_ADD_AD,
+                    'ent' => BOT_PROCESS__ADD_AD,
                     's' => false
                 ])
             ]]);
@@ -736,13 +737,13 @@ class ads extends Controller
                             [
                                 'text' => "رزرو شده ها ($reservedCount)",
                                 'callback_data' => json_encode([
-                                    'process_id' => 'admin_ads_' . BOT__AD__STATE__RESERVED
+                                    'process_id' => 'ads_' . BOT__AD__STATE__RESERVED
                                 ])
                             ],
                             [
                                 'text' => "رد شده ها ($rejectedCount)",
                                 'callback_data' => json_encode([
-                                    'process_id' => 'admin_ads_' . BOT__AD__STATE__REJECTED
+                                    'process_id' => 'ads_' . BOT__AD__STATE__REJECTED
                                 ])
                             ]
                         ],
@@ -750,13 +751,13 @@ class ads extends Controller
                             [
                                 'text' => "تأیید شده ها ($confirmedCount)",
                                 'callback_data' => json_encode([
-                                    'process_id' => 'admin_ads_' . BOT__AD__STATE__CONFIRMED
+                                    'process_id' => 'ads_' . BOT__AD__STATE__CONFIRMED
                                 ])
                             ],
                             [
                                 'text' => "منقضی شده ها ($expiredCount)",
                                 'callback_data' => json_encode([
-                                    'process_id' => 'admin_ads_' . BOT__AD__STATE__EXPIRED
+                                    'process_id' => 'ads_' . BOT__AD__STATE__EXPIRED
                                 ])
                             ]
                         ],
@@ -764,13 +765,13 @@ class ads extends Controller
                             [
                                 'text' => "ارسال شده ها ($sentCount)",
                                 'callback_data' => json_encode([
-                                    'process_id' => 'admin_ads_' . BOT__AD__STATE__SENT
+                                    'process_id' => 'ads_' . BOT__AD__STATE__SENT
                                 ])
                             ],
                             [
                                 'text' => "پذیرفته شده ها ($promisedCount)",
                                 'callback_data' => json_encode([
-                                    'process_id' => 'admin_ads_' . BOT__AD__STATE__PROMISED
+                                    'process_id' => 'ads_' . BOT__AD__STATE__PROMISED
                                 ])
                             ]
                         ]
@@ -788,7 +789,7 @@ class ads extends Controller
                 'text' => '❌ انصراف',
                 'callback_data' => json_encode([
                     'process_id' => BOT_PROCESS__NAME__ADMIN_PANEL,
-                    'ent' => BOT_PROCESS__ADMIN_ADD_AD
+                    'ent' => BOT_PROCESS__ADD_AD
                 ])
             ]]);
         }
@@ -854,7 +855,7 @@ class ads extends Controller
                     )
                 ]);
                 $keyboard = [];
-                if (!count($ads)) {
+                if (!count($ads) && isset($entry['srch'])) {
                     $options['text'] = '❌ آگهی ای با این عنوان یا شناسه یافت نشد، لطفا مجدد سعی کنید';
                     $options['reply_markup'] = json_encode([
                         'inline_keyboard' => [
@@ -868,6 +869,9 @@ class ads extends Controller
                             ]
                         ]
                     ]);
+                    goto ads_1_default_skipToSend;
+                } else if (!count($ads)) {
+                    $options['text'] = '❌ آگهی ای برای نمایش وجود ندارد';
                     goto ads_1_default_skipToSend;
                 }
                 foreach ($ads as $ad) {
@@ -1126,7 +1130,7 @@ class ads extends Controller
                 'text' => '❌ انصراف',
                 'callback_data' => json_encode([
                     'process_id' => BOT_PROCESS__NAME__ADMIN_PANEL,
-                    'ent' => BOT_PROCESS__ADMIN_ADD_AD
+                    'ent' => BOT_PROCESS__ADD_AD
                 ])
             ]]);
         }
@@ -1171,26 +1175,114 @@ class ads extends Controller
                 $this->checkAdWorkerCount($callbackData['aid']);
                 $adCreator = telUser::find($sentRecord->ad->creator_user_id);
                 $adCreatorUserID = $adCreator->user_id;
+                $this->updateAdAgreeMessage($sentRecord);
+
 
                 $options['chat_id'] = $adCreator->chat_id;
-                $options['text'] = "🔔 اطلاعیه آگهی شما\n\n";
-                $options['text'] .= "کاربر: " . $adCreator->profile->full_name . " | کد کاربری ($adCreatorUserID) آگهی کاری شما با پذیرفت\n";
+                $options['text'] = "🔔 اطلاعیه آگهی\n\n";
+                $options['text'] .= "کاربر: " . $adCreator->profile->full_name . " | کد کاربری ($adCreatorUserID) آگهی " . ($sentRecord->ad->title ?? 'بدون عنوان') . " کد (" . $sentRecord->ad_id . ") را پذیرفت.";
+                $options['reply_markup'] = json_encode([
+                    'inline_keyboard' => [
+                        [
+                            [
+                                'text' => ($adCreator->profile->sex == 'man' ? '🙎🏻‍♂️' : '🙍🏻‍♀️') . 'دیدن اطلاعات کاربر',
+                                'callback_data' => json_encode([
+                                    'src' => 'ad',
+                                    'a' => 'pr',
+                                    'srid' => $sentRecord->id
+                                ])
+                            ]
+                        ]
+                    ]
+                ]);
+                if ($this->botService->sendBase('sendMessage', $options, false, false)) {
+                    $adCreator->last_bot_message_id = 0;
+                    $adCreator->save();
+                }
+                break;
+            }
+            case 'pr':
+            {
+                $callbackData = json_decode($this->botUpdate->callbackQuery->data, true);
+                $sentRecord = sentAd::find($callbackData['srid']);
+                $agreeUser = $sentRecord->user;
+                $adTitle = $sentRecord->ad->title;
+                $adId = $sentRecord->ad->id;
 
-                $this->botService->sendBase('sendMessage', $options, false, true);
+                $agreeFullName = $agreeUser->profile->full_name ?? 'بدون نام';
+                $agreeUserId = $agreeUser->profile->user_id;
+
+                $options['text'] = "⚒ پذیرنده آگهی '$adTitle' کد آگهی ($adId): \n\n";
+
+                $options['text'] .= "کد کاربر: $agreeUserId \n";
+                $options['text'] .= "نام و نام خانوادگی: $agreeFullName \n\n";
+                if ($this->botUser->profile->city_id != $agreeUser->profile->city_id || ($sentRecord->ad->village_id && $sentRecord->ad->village_id != $this->botUser->profile->village_id)) {
+                    $cityName = $agreeUser->profile->city->name;
+                    $villageName = $agreeUser->profile->village->name;
+                    $options['text'] .= "شهر: $cityName \n";
+                    $options['text'] .= "روستا: $villageName \n\n";
+                }
+                $options['text'] .= "جهت ارسال پیام به این کاربر میتوانید از دکمه '✏️ ارسال پیام' استفاده کنید";
+                $options['reply_markup'] = json_encode([
+                    'inline_keyboard' => [
+                        [
+                            [
+                                'text' => '✏️ ارسال پیام',
+                                'callback_data' => json_encode([
+                                    'process_id' => BOT_PROCESS__ADS_SEND_AGREE_MESSAGE,
+                                    'ent' => $sentRecord->id
+                                ])
+                            ]
+                        ]
+                    ]
+                ]);
+                $options['message_id'] = $this->botUpdate->getMessage()->messageId;
+                $options['chat_id'] = $this->botUser->chat_id;
+                $this->botService->sendBase('editMessageText', $options);
                 break;
             }
         }
     }
 
-    function checkAdWorkerCount($aid) {
+    function updateAdAgreeMessage ($sentRecord, $type = 'agree')
+    {
+        switch ($type) {
+            case 'agree':
+            {
+                if ($sentRecord->type == 'message')
+                    $messageText = $this->botUpdate->callbackQuery->message->text;
+                else if ($sentRecord->type == 'media')
+                    $messageText = $this->botUpdate->callbackQuery->message->caption;
+
+                $messageText .= "\n\n✅ درخواست پذیرش شما با موفقیت به ارسال کننده تحویل داده شد \nارسال کننده آگهی به زودی با شما در ارتباط خواهد بود";
+
+                $options['chat_id'] = $sentRecord->chat_id;
+                $options['message_id'] = $sentRecord->message_id;
+                if ($sentRecord->type == 'message') {
+                    $type = 'editMessageText';
+                    $options['text'] = $messageText;
+                } else {
+                    $type = 'editMessageCaption';
+                    $options['caption'] = $messageText;
+                }
+                $this->botService->sendBase($type, $options);
+                break;
+            }
+        }
+    }
+
+    function checkAdWorkerCount ($aid)
+    {
         $ad = teAd::find($aid);
 
         $agreedAds = $ad->sents()->where('state', BOT__SENT_AD__STATE__AGREED)->get();
         if (count($agreedAds) >= $ad->worker_count) {
             $ad->state = BOT__AD__STATE__PROMISED;
             foreach ($ad->sents as $sent) {
+                if ($sent->chat_id == $this->botUser->chat_id)
+                    continue;
                 $this->botService->sendBase('editMessageReplyMarkup', [
-                   'chat_id' => $sent->chat_id,
+                    'chat_id' => $sent->chat_id,
                     'message_id' => $sent->message_id,
                     'reply_markup' => json_encode([
                         'inline_keyboard' => [
@@ -1219,4 +1311,211 @@ class ads extends Controller
         $ad->save();
     }
 
+    function send_agree_message ($entry = null)
+    {
+        if (isset($entry['entry'])) {
+            $this->botService->updateProcessData([
+                'tmp_data' => json_encode([
+                    'sent_record_id' => $entry['entry']
+                ])
+            ]);
+        }
+        $tmpData = json_decode($this->botUser->currentProcess->pivot->tmp_data, true);
+        $sentRecord = sentAd::find($tmpData['sent_record_id']);
+        $sub_process = $this->botUser->currentProcess->pivot->sub_process;
+
+        $options = [];
+
+        $send = false;
+        $log = false;
+        $type = 'editMessageText';
+
+        switch ($sub_process) {
+            default:
+            {
+
+                $options['message_id'] = $this->botUpdate->callbackQuery->message->messageId;
+                $options['chat_id'] = $this->botUser->chat_id;
+                $options['text'] = "📝 لطفا متن مورد نظر جهت ارسال به کاربر را ارسال کنید\n\nپس از اتمام ارسال پیام، می توانید با زدن دکمه '📨 پایان ارسال' به ارسال پیام خاتمه دهید\n\n⚠️ پیغام شما فقط می تواند از نوع متنی باید";
+                $options['reply_markup'] = json_encode([
+                    'keyboard' => [
+                        [
+                            [
+                                'text' => 'پایان ارسال'
+                            ]
+                        ]
+                    ],
+                    'resize_keyboard' => true,
+                    'one_time_keyboard' => true
+                ]);
+                $send = true;
+                $type = 'sendMessage';
+
+                $this->botService->updateProcessData([
+                    'sub_process' => 'send_agree_message_input'
+                ]);
+                break;
+            }
+            case 'send_agree_message_input':
+            {
+                if ($this->botUpdate->detectType() == 'message' && $this->botUpdate->getMessage()->detectType() == 'text') {
+                    if ($this->botUpdate->getMessage()->text != 'پایان ارسال') {
+                        $message = $this->botUpdate->getMessage()->text;
+                        $senderFullName = $this->botUser->profile->full_name;
+                        $senderId = $this->botUser->user_id;
+                        $adTitle = $sentRecord->ad->title ?? 'برون عنوان';
+                        $adId = $sentRecord->ad_id;
+                        $options['text'] = "📩 پیغام از طرف: '$senderFullName' کد کاربری ($senderId) \n بابت آگهی: '$adTitle' کد آگهی($adId) \n\n متن پیغام: \n$message";
+                        $options['reply_markup'] = json_encode([
+                            'inline_keyboard' => [
+                                [
+                                    [
+                                        'text' => '⤴️ پاسخ به پیغام',
+                                        'callback_data' => json_encode([
+                                            'process_id' => BOT_PROCESS__ADS_SEND_REPLY_AGREE_MESSAGE,
+                                            'ent' => $sentRecord->id
+                                        ])
+                                    ]
+                                ]
+                            ]
+                        ]);
+                        $options['chat_id'] = $sentRecord->chat_id;
+                        $type = 'sendMessage';
+                        $send = true;
+                        $log = true;
+                    }else {
+                        $agreeUser = $sentRecord->user->profile->full_name;
+                        $options['text'] = "چت شما با '$agreeUser' با موفقت خاتمه یافت.\n\nدر حال انتقال به منوی اصلی";
+                        $options['reply_markup'] = json_encode([
+                            'remove_keyboard' => true
+                        ]);
+
+                        $this->botService->send('sendMessage', $options, false);
+                        $this->botService->handleProcess(BOT_PROCESS__MAIN);
+                    }
+                }else {
+                    $options['text'] = '⛔️ مقدار ارسالی مجاز نیست، لطفا فقط متن ارسال کنید';
+                    $options['chat_id'] = $this->botUser->chat_id;
+                    $type = 'sendMessage';
+                    $send = true;
+                }
+                break;
+            }
+        }
+
+        if ($send)
+            if ($this->botService->sendBase($type, $options)) {
+                if ($log) {
+                    $this->logChat($this->botUser->user_id, $sentRecord->user_id, $this->botUpdate->getMessage()->text);
+                }
+            }
+    }
+
+    function send_reply_agree_message ($entry = null)
+    {
+        if (isset($entry['entry'])) {
+            $this->botService->updateProcessData([
+                'tmp_data' => json_encode([
+                    'sent_record_id' => $entry['entry']
+                ])
+            ]);
+        }
+        $tmpData = json_decode($this->botUser->currentProcess->pivot->tmp_data, true);
+        $sentRecord = sentAd::find($tmpData['sent_record_id']);
+        $sub_process = $this->botUser->currentProcess->pivot->sub_process;
+
+        $options = [];
+
+        $send = false;
+        $log = false;
+        $type = 'editMessageText';
+
+        switch ($sub_process) {
+            default:
+            {
+                $options['message_id'] = $this->botUpdate->callbackQuery->message->messageId;
+                $options['chat_id'] = $this->botUser->chat_id;
+                $options['text'] = "📝 لطفا متن مورد نظر جهت ارسال به کاربر را ارسال کنید\n\nپس از اتمام ارسال پیام، می توانید با زدن دکمه '📨 پایان ارسال' به ارسال پیام خاتمه دهید\n\n⚠️ پیغام شما فقط می تواند از نوع متنی باید";
+                $options['reply_markup'] = json_encode([
+                    'keyboard' => [
+                        [
+                            [
+                                'text' => '📨 پایان ارسال'
+                            ]
+                        ]
+                    ],
+                    'resize_keyboard' => true,
+                    'one_time_keyboard' => true
+                ]);
+                $send = true;
+                $type = 'sendMessage';
+
+                $this->botService->updateProcessData([
+                    'sub_process' => 'send_agree_message_input'
+                ]);
+                break;
+            }
+            case 'send_agree_message_input':
+            {
+                if ($this->botUpdate->detectType() == 'message' && $this->botUpdate->getMessage()->detectType() == 'text') {
+                    if ($this->botUpdate->getMessage()->text != '📨 پایان ارسال') {
+                        $message = $this->botUpdate->getMessage()->text;
+                        $senderFullName = $this->botUser->profile->full_name;
+                        $senderId = $this->botUser->user_id;
+                        $adTitle = $sentRecord->ad->title ?? 'برون عنوان';
+                        $adId = $sentRecord->ad_id;
+                        $options['text'] = "📩 پیغام از طرف: '$senderFullName' کد کاربری ($senderId) \n بابت آگهی: '$adTitle' کد آگهی($adId) \n\n متن پیغام: \n$message";
+                        $options['reply_markup'] = json_encode([
+                            'inline_keyboard' => [
+                                [
+                                    [
+                                        'text' => '⤴️ پاسخ به پیغام',
+                                        'callback_data' => json_encode([
+                                            'process_id' => BOT_PROCESS__ADS_SEND_AGREE_MESSAGE,
+                                            'ent' => $sentRecord->id
+                                        ])
+                                    ]
+                                ]
+                            ]
+                        ]);
+                        $options['chat_id'] = $sentRecord->ad->creator->chat_id;
+                        $type = 'sendMessage';
+                        $send = true;
+                        $log = true;
+                    }else {
+                        $agreeUser = $sentRecord->user->profile->full_name;
+                        $options['text'] = "چت شما با '$agreeUser' با موفقت خاتمه یافت.\n\nدر حال انتقال به منوی اصلی";
+                        $options['reply_markup'] = json_encode([
+                            'remove_keyboard' => true
+                        ]);
+
+                        $this->botService->send('sendMessage', $options, false);
+                        $this->botService->handleProcess(BOT_PROCESS__MAIN);
+                    }
+                }else {
+                    $options['text'] = '⛔️ مقدار ارسالی مجاز نیست، لطفا فقط متن ارسال کنید';
+                    $options['chat_id'] = $this->botUser->chat_id;
+                    $type = 'sendMessage';
+                    $send = true;
+                }
+                break;
+            }
+        }
+
+        if ($send)
+            if ($this->botService->sendBase($type, $options)) {
+                if ($log) {
+                    $this->logChat($this->botUser->user_id, $sentRecord->ad->creator->user_id, $this->botUpdate->getMessage()->text);
+                }
+            }
+    }
+
+    function logChat($from, $to, $data) {
+        $log = new chatLog();
+        $log->from = $from;
+        $log->to = $to;
+        $log->time = time();
+        $log->data = $data;
+        $log->save();
+    }
 }

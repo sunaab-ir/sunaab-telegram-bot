@@ -111,8 +111,10 @@ class updateController extends Controller
         $command = $request->botUpdate->getMessage()->entities[0];
         $commandName = substr($request->botUpdate->getMessage()->text, $command['offset'] +1 , $command['length']);
         $commandValue = substr($request->botUpdate->getMessage()->text, $command['length'] , strlen($request->botUpdate->getMessage()->text));
-        if($commandName == 'start')
-            $this->handleNormalUpdate($request);
+        if($commandName == 'start'){
+            $commandController = new command();
+            $commandController->start();
+        }
         else
             $this->botService->handleCommandProcess(null, $commandValue, [
                 'sub_process' => $commandName

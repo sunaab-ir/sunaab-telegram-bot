@@ -235,16 +235,11 @@ class botService
                 goto resendSendBaseToTelegram;
             }
         }
-        if (in_array($type, ["sendMessage"]) && isset($response['message_id'])) {
-            if ($reset) {
-                $this->botUser->last_bot_message_id = null;
-                $this->botUser->save();
-            } else {
-                $this->botUser->last_bot_message_id = $response->messageId;
-                $this->botUser->last_bot_message_date = time();
-                $this->botUser->save();
-            }
+        if ($reset) {
+            $this->botUser->last_bot_message_id = 0;
+            $this->botUser->save();
         }
+
         return $response;
     }
 

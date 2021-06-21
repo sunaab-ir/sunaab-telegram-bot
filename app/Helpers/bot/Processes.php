@@ -16,8 +16,10 @@ const BOT_PROCESS__NAME__ADMIN_PANEL = 'admin_panel';
 const BOT_PROCESS__COMMAND = 7;
 const BOT_PROCESS__NAME__COMMAND = 'command';
 const BOT_PROCESS__NAME__WORKER = 'worker';
-const BOT_PROCESS__ADMIN_ADD_AD = 'admin_add_ad';
-const BOT_PROCESS__ADMIN_ADS = 'admin_ads';
+const BOT_PROCESS__ADD_AD = 'add_ad';
+const BOT_PROCESS__ADS = 'ads';
+const BOT_PROCESS__ADS_SEND_AGREE_MESSAGE = 'adssndagrmsg';
+const BOT_PROCESS__ADS_SEND_REPLY_AGREE_MESSAGE = 'adssndrplyagrmsg';
 
 
 

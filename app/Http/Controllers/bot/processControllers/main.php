@@ -192,7 +192,7 @@ class main extends Controller
             {
                 $options['text'] .= "
 
-                لطفا نام و نام خانوادگیت رو ارسال کن";
+لطفا نام و نام خانوادگیت رو ارسال کن";
                 $this->botService->send('sendMessage', $options, false);
                 $this->botService->updateProcessData([
                     'sub_process' => 'get_fullName_input'
@@ -228,7 +228,7 @@ class main extends Controller
             }
             case 'get_sex':
             {
-                $options['text'] .= "\n\n🙎🏻‍♂️🙍🏻‍♀️ لطفا جنسیت خود را مشخص کنید";
+                $options['text'] .= "\n\n🙎🏻‍♂️🙍🏻‍♀️ لطفا جنسیتتو مشخص کن";
                 $options['reply_markup'] = json_encode([
                     'inline_keyboard' => [
                         [
@@ -281,14 +281,27 @@ class main extends Controller
             }
             case 'is_manual_worker':
             {
-                $options['text'] .= 'خب، حالا مشخص کن 👷🏻‍♂️ کارگر هستی یا 👨🏻‍🌾 کشاورز 😊';
+//                $options['text'] .= 'خب، حالا مشخص کن 👷🏻‍♂️ کارگر هستی یا 👨🏻‍🌾 کشاورز 😊';
+                $options['text'] .= 'خب، حالا مشخص کن میخوای کار پیدا کنی یا کارگر میخوای';
+//                $options['reply_markup'] = json_encode([
+//                    'inline_keyboard' => [
+//                        [
+//                            ['text' => '👷🏻‍♂️ کارگر', 'callback_data' => json_encode([
+//                                'is_manual_worker' => true
+//                            ])],
+//                            ['text' => '👨🏻‍🌾 کشاورز', 'callback_data' => json_encode([
+//                                'is_manual_worker' => false
+//                            ])]
+//                        ]
+//                    ]
+//                ]);
                 $options['reply_markup'] = json_encode([
                     'inline_keyboard' => [
                         [
-                            ['text' => '👷🏻‍♂️ کارگر', 'callback_data' => json_encode([
+                            ['text' => '👷🏻‍♂️ کار میخوام', 'callback_data' => json_encode([
                                 'is_manual_worker' => true
                             ])],
-                            ['text' => '👨🏻‍🌾 کشاورز', 'callback_data' => json_encode([
+                            ['text' => '👨🏻‍🌾 کارگر میخوام', 'callback_data' => json_encode([
                                 'is_manual_worker' => false
                             ])]
                         ]
@@ -440,7 +453,7 @@ class main extends Controller
                         $this->botService->send('editMessageText', [
                             'text' => 'در بروز رسانی های بعدی شهر های بیشتری در اختیار شما قرار می گیرد 😊
 
-                            در حال بازگشت به منو...'
+در حال بازگشت به منو...'
                         ], false);
                         sleep(2);
                         $this->botService->handleProcess(null, null,

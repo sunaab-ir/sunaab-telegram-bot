@@ -2,11 +2,13 @@
 
 namespace App\Http\Middleware;
 
+use App\Commands\StartCommand;
 use App\Models\telUser;
 use App\Models\telUserTrack;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
+use Telegram\Bot\Commands\HelpCommand;
 use Telegram\Bot\Laravel\Facades\Telegram;
 use Telegram\Bot\Objects\Update;
 

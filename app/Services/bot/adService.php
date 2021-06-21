@@ -99,14 +99,15 @@ class adService
                 if (strlen($options['caption']) <= 1010 && $ad->photo_file_id) {
                     echo "send\n";
                     $options['photo'] = $ad->photo_file_id;
-                    if ($response[$user->user_id] = $this->botService->sendBase('sendPhoto', $options, false, true)) {
+                    if ($result = $this->sendAdToTelegram($options)) {
                         $sentRecord = new sentAd();
                         $sentRecord->ad_id = $ad->id;
                         $sentRecord->user_id = $user->user_id;
                         $sentRecord->chat_id = $user->chat_id;
-                        $sentRecord->message_id = $response[$user->user_id]->messageId;
-                        $sentRecord->sent_time = $response[$user->user_id]->date;
-                        $sentRecord->type = 'media';
+                        $sentRecord->message_id = $result['response']->messageId;
+                        $sentRecord->sent_time = $result['response']->date;
+                        if ($result['type'] == 'sendPhoto')
+                            $sentRecord->type = 'media';
                         $sentRecord->save();
                     } else {
                         Log::debug(
@@ -114,13 +115,13 @@ class adService
                         );
                     }
                 } else {
-                    if ($response[$user->user_id] = $this->botService->sendBase('sendMessage', $options)) {
+                    if ($result = $this->sendAdToTelegram($options, false)) {
                         $sentRecord = new sentAd();
                         $sentRecord->ad_id = $ad->id;
                         $sentRecord->user_id = $user->user_id;
                         $sentRecord->chat_id = $user->chat_id;
-                        $sentRecord->message_id = $response[$user->user_id]->messageId;
-                        $sentRecord->sent_time = $response[$user->user_id]->date;
+                        $sentRecord->message_id = $result['response']->messageId;
+                        $sentRecord->sent_time = $result['response']->date;
                         $sentRecord->save();
                     } else {
                         Log::debug(
@@ -135,5 +136,29 @@ class adService
             echo $e->getMessage();
             return false;
         }
+    }
+
+    function sendAdToTelegram($options = [], $media = true) {
+        $type = 'sendPhoto';
+        if (!$media) {
+            $options['text'] = $options['caption'];
+        }
+        try {
+            resendAdToTelegram:
+            $response = Telegram::$type($options);
+        } catch (\Exception $exception) {
+            Log::debug($exception);
+            $type = 'sendMessage';
+            $options['text'] = $options['caption'];
+            goto resendAdToTelegram;
+        }
+        if (!isset($response)) {
+            return false;
+        }
+        $this->botUser->last_bot_message_id = 0;
+        $this->botUser->save();
+        $result['response'] = $response;
+        $result['type'] = $type;
+        return $result;
     }
 }

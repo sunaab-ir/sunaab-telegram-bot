@@ -17,4 +17,10 @@ class teAd extends Model
     function sents() {
         return $this->hasMany(sentAd::class, 'ad_id');
     }
+    function city() {
+        return $this->belongsTo(City::class, 'city_id');
+    }
+    function village() {
+        return $this->belongsTo(Village::class, 'village_id');
+    }
 }
