@@ -1174,13 +1174,13 @@ class ads extends Controller
                 $sentRecord->save();
                 $this->checkAdWorkerCount($callbackData['aid']);
                 $adCreator = telUser::find($sentRecord->ad->creator_user_id);
-                $adCreatorUserID = $adCreator->user_id;
+                $receiverID = $sentRecord->user->user_id;
                 $this->updateAdAgreeMessage($sentRecord);
 
 
                 $options['chat_id'] = $adCreator->chat_id;
                 $options['text'] = "🔔 اطلاعیه آگهی\n\n";
-                $options['text'] .= "کاربر: " . $adCreator->profile->full_name . " | کد کاربری ($adCreatorUserID) آگهی " . ($sentRecord->ad->title ?? 'بدون عنوان') . " کد (" . $sentRecord->ad_id . ") را پذیرفت.";
+                $options['text'] .= "کاربر: " . $sentRecord->user->profile->full_name . " | کد کاربری ($receiverID) آگهی " . ($sentRecord->ad->title ?? 'بدون عنوان') . " کد (" . $sentRecord->ad_id . ") را پذیرفت.";
                 $options['reply_markup'] = json_encode([
                     'inline_keyboard' => [
                         [
