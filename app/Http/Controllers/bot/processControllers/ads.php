@@ -1404,8 +1404,15 @@ class ads extends Controller
         }
 
         if ($send)
-            if ($this->botService->sendBase($type, $options)) {
+            if ($response = $this->botService->sendBase($type, $options)) {
                 if ($log) {
+                    $message = $this->botUpdate->getMessage()->text;
+                    $message .= "\n\n✔️ تحویل شد";
+                    $options['text'] = $message;
+                    $options['chat_id'] = $this->botUser->chat_id;
+                    $options['message_id'] = $this->botUpdate->getMessage()->messageId;
+                    $this->botService->sendBase('editMessageText', $options);
+
                     $this->logChat($this->botUser->user_id, $sentRecord->user_id, $this->botUpdate->getMessage()->text);
                 }
             }
@@ -1503,8 +1510,15 @@ class ads extends Controller
         }
 
         if ($send)
-            if ($this->botService->sendBase($type, $options)) {
+            if ($response = $this->botService->sendBase($type, $options)) {
                 if ($log) {
+                    $message = $this->botUpdate->getMessage()->text;
+                    $message .= "\n\n✔️ تحویل شد";
+                    $options['text'] = $message;
+                    $options['chat_id'] = $this->botUser->chat_id;
+                    $options['message_id'] = $this->botUpdate->getMessage()->messageId;
+                    $this->botService->sendBase('editMessageText', $options);
+
                     $this->logChat($this->botUser->user_id, $sentRecord->ad->creator->user_id, $this->botUpdate->getMessage()->text);
                 }
             }
