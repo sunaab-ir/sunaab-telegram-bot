@@ -1406,9 +1406,8 @@ class ads extends Controller
         if ($send)
             if ($response = $this->botService->sendBase($type, $options)) {
                 if ($log) {
-                    $message = $this->botUpdate->getMessage()->text;
-                    $message .= "\n\n✔️ تحویل شد";
-                    $options['text'] = $message;
+                    $options = [];
+                    $options['text'] = "✔️ تحویل شد";
                     $options['chat_id'] = $this->botUser->chat_id;
                     $this->botService->sendBase('sendMessage', $options);
 
@@ -1511,9 +1510,8 @@ class ads extends Controller
         if ($send)
             if ($response = $this->botService->sendBase($type, $options)) {
                 if ($log) {
-                    $message = $this->botUpdate->getMessage()->text;
-                    $message .= "\n\n✔️ تحویل شد";
-                    $options['text'] = $message;
+                    $options = [];
+                    $options['text'] = "✔️ تحویل شد";
                     $options['chat_id'] = $this->botUser->chat_id;
                     $this->botService->sendBase('sendMessage', $options);
 
