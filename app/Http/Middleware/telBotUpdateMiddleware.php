@@ -6,6 +6,7 @@ use App\Commands\StartCommand;
 use App\Models\telUser;
 use App\Models\telUserTrack;
 use App\Models\User;
+use App\Services\bot\botService;
 use Closure;
 use Illuminate\Http\Request;
 use Telegram\Bot\Commands\HelpCommand;
@@ -35,7 +36,16 @@ class telBotUpdateMiddleware
             $request->botUser = $user;
             $this->setTrack($request);
         }
-        return $next($request);
+        try {
+            return $next($request);
+        }catch (\Exception $exception) {
+            $botService = new botService($user, $request->botUpdate);
+                $botService->handleProcess(BOT_PROCESS__MAIN, [
+                    'entry' => 'custom_message',
+                    'message' => "⛔️ خطایی رخ داد به منوی اصلی هدایت شدید\n\nجهت جلوگیری از بروز خطا در حین عملیات از فرستادن چند باره اطلاعات یا زدن مجدد دکمه دستور خودداری کنید\n\n"
+                ]);
+            }
+
     }
 
     function getTelUser (Request $request)

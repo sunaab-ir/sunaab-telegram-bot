@@ -2,7 +2,6 @@
 
 
 
-////// Votes
 
 //types
 
@@ -46,4 +45,8 @@ const  BOT__SENT_AD__STATE__EXPIRED = 4;
 // sent ad state</>
 
 
-///// Votes</>
+// Response Errors
+
+const BOT_ERROR__FORBIDDEN_BLOCKED_BY_USER = 'Forbidden: bot was blocked by the user';
+
+// Response Errors</>

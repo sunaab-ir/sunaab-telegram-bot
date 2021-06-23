@@ -26,6 +26,7 @@ class CreateTeAdsTable extends Migration
             $table->enum('state', [1,2,3,4,5,6])->default(1);
             $table->integer('worker_count')->default(1);
             $table->unsignedInteger('work_category')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
     }

@@ -16,8 +16,10 @@ use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Facades\Log;
 use Telegram\Bot\Api;
+use Telegram\Bot\Exceptions\TelegramResponseException;
 use Telegram\Bot\Laravel\Facades\Telegram;
 use Telegram\Bot\Objects\User;
+use function GuzzleHttp\Psr7\get_message_body_summary;
 
 class adService
 {
@@ -141,13 +143,16 @@ class adService
     function sendAdToTelegram($options = [], $media = true) {
         $type = 'sendPhoto';
         if (!$media) {
+            $type = 'sendMessage';
             $options['text'] = $options['caption'];
         }
         try {
             resendAdToTelegram:
             $response = Telegram::$type($options);
-        } catch (\Exception $exception) {
-            Log::debug($exception);
+        } catch (TelegramResponseException $exception) {
+            Log::debug($exception->getMessage());
+            if ($exception->getMessage() == BOT_ERROR__FORBIDDEN_BLOCKED_BY_USER)
+                return;
             $type = 'sendMessage';
             $options['text'] = $options['caption'];
             goto resendAdToTelegram;
@@ -160,5 +165,29 @@ class adService
         $result['response'] = $response;
         $result['type'] = $type;
         return $result;
+    }
+
+    function absoluteDelAd($adId) {
+        $ad = teAd::find($adId);
+        if (!$ad)
+            return false;
+
+        foreach ($ad->sents as $sent) {
+            $options['chat_id'] = $sent->chat_id;
+            if (time() - $sent->sent_time < 172800) {
+                $options['message_id'] = $sent->message_id;
+                $this->botService->sendBase('deleteMessage', $options);
+            }
+            $receiverFullName = $sent->user->profile->full_name;
+            $adTitle = $ad->title ?? get_message_body_summary($ad->ad_text, 10);
+            $senderName = $this->botUser->profile->full_name;
+            $options['text'] = "کاربر محترم، $receiverFullName\n\nآگهی کاری '$adTitle' توسط ارسال کننده آن $senderName حذف شد و این به معنی لغو شدن کار است، لطفا از بین آگهی های دریافت شده یکی دیگر را انتخاب کنید\n\nموفق باشید 🌹";
+            $this->botService->sendBase('sendMessage', $options);
+            $sent->delete();
+        }
+
+        $ad->delete();
+
+        return true;
     }
 }

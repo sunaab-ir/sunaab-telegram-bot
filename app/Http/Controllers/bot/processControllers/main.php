@@ -47,6 +47,11 @@ class main extends Controller
                         ]);
                         $options['text'] .= "خب حالا که پروفایلت رو تکمیل کردی وقتشه که بریم سراغ قسمت های باحال 😃😉\n\n";
                     }
+                    case 'custom_message':
+                    {
+                        $options['text'] .= $params['message'];
+                        break;
+                    }
                 }
             }
             $keyboard = [];
@@ -62,6 +67,14 @@ class main extends Controller
                         ]
                     ]
                 );
+            }
+            else{
+                $keyboard[][] = [
+                    'text' => "پنل کشاورز",
+                    'callback_data' => json_encode([
+                        'process_id' => BOT_PROCESS__FARMER_PANEL
+                    ])
+                ];
             }
             $keyboard = array_merge($keyboard, [
                     [
@@ -169,9 +182,7 @@ class main extends Controller
 
 🔵 نوع کارگر: $workCategoryName";
                 }
-                $options['text'] .= '
-
-اگه میخوای مشخصاتت رو ویرایش کنی کافیه روی دکمه پایین که نوشته "📝ویرایش مشخصات" بزنی 🙂';
+                $options['text'] .= "\n\nاگه میخوای مشخصاتت رو ویرایش کنی کافیه روی دکمه پایین که نوشته '📝 ویرایش مشخصات' بزنی 🙂";
                 $options['reply_markup'] = json_encode([
                     'inline_keyboard' => [
                         [

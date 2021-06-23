@@ -46,6 +46,11 @@ class admin extends Controller
                     ]);
                     break;
                 }
+                case 'custom_message':
+                {
+                    $options['text'] .= $entry['message'];
+                    break;
+                }
             }
         } else {
             adminPanelDefaultText:

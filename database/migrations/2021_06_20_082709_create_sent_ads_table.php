@@ -22,6 +22,7 @@ class CreateSentAdsTable extends Migration
             $table->integer('sent_time');
             $table->integer('state')->default(1);
             $table->enum('type', ['message', 'media'])->default('message');
+            $table->softDeletes();
             $table->timestamps();
         });
     }

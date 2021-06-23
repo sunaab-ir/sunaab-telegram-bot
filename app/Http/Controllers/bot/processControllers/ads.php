@@ -50,6 +50,19 @@ class ads extends Controller
                     $options['text'] .= $entry['message'];
                     break;
                 }
+                case 'farmer':
+                {
+                    $userFullName = $this->botUser->profile->full_name;
+                    $this->botService->updateProcessData([
+                        'tmp_data' => $this->botService->addJsonDataset(
+                            $this->botUser->currentProcess->pivot->tmp_data,
+                            'user_type',
+                            $entry['entry']
+                        )
+                    ]);
+                    $options['text'] .= "$userFullName عزیز، به بخش افزودن آگهی خوش آمدید\n\nلطفا طبق دستور و العمل های هر مرحله اقدام به ثبت آگهی کنید\n\n⚠️ پس از زدن دکمه مورد نظر یا فرستادن مقدار خواسته شده، از تکرار ارسال مقدار یا زدن دکمه خودداری کنید تا مشکلی در فرایند به وجود نیاید 🌹" . "\n\n";
+                    break;
+                }
                 default:
                 {
                     $options['text'] .= constant('BOT_MESSAGE__ENTRY__' . strtoupper($entry['entry']));
@@ -57,6 +70,8 @@ class ads extends Controller
                 }
             }
         }
+
+        $tmpData = json_decode($this->botUser->currentProcess->pivot->tmp_data, true);
         switch ($sub_process) {
             default:
             {
@@ -230,14 +245,7 @@ class ads extends Controller
             }
             case 'ad_body':
             {
-                $options['text'] .= '📃 لطفا متن آگهی را ارسال کنید
-
-لطفا به این نکات دقت نمایید:
-
-- متن آگهی باید حداقل دارای حداکثر 900 کاراکتر باشد.
-- اگر نیاز به مشخص کردن تعداد افراد است، در متن آگهی ذکر شود.
-- از قرار دادن شماره موبایل خودداری گردد.
-- در صورت نیاز به ذکر آدرس، حتما آدرس را در متن آگهی ذکر کنید.';
+                $options['text'] .= "📃 لطفا متن آگهی را ارسال کنید\n\nلطفا به این نکات دقت نمایید:\n\n- متن آگهی باید حداقل دارای حداکثر 900 کاراکتر باشد.\n- اگر نیاز به مشخص کردن تعداد افراد است، در متن آگهی ذکر شود.\n- در صورت نیاز به ذکر آدرس، حتما آدرس را در متن آگهی ذکر کنید.";
 
                 $send = true;
                 $this->botService->updateProcessData([
@@ -673,22 +681,36 @@ class ads extends Controller
                 $tel_ad->worker_count = $ad_data['ad_worker_count'] ?? 1;
                 $tel_ad->work_category = $ad_data['work_category'] ?? BOT__WORK_CATEGORY__SIMPLE_WORKER;
                 $tel_ad->save();
-                $this->botService->handleProcess(BOT_PROCESS__NAME__ADMIN_PANEL, [
-                    'entry' => BOT_PROCESS__ADD_AD,
-                    's' => true
-                ]);
+                if (isset($tmpData['user_type']) && $tmpData['user_type'] == 'farmer') {
+                    $userFullName = $this->botUser->profile->full_name;
+                    $this->botService->handleProcess(BOT_PROCESS__FARMER_PANEL, [
+                        'entry' => 'custom_message',
+                        'message' => "$userFullName عزیز، آگهی شما با موفقیت ثبت شد و در سریع ترین زمان بررسی و به دست کارجویان خواهد رسید\n\n"
+                    ]);
+                } else
+                    $this->botService->handleProcess(BOT_PROCESS__NAME__ADMIN_PANEL, [
+                        'entry' => BOT_PROCESS__ADD_AD,
+                        's' => true
+                    ]);
                 break;
             }
         }
 
         if ($cancelButton) {
-            $options = $this->botService->appendInlineKeyboardButton($options, [[
-                'text' => '❌ انصراف',
-                'callback_data' => json_encode([
+            if (isset($tmpData['user_type']) && $tmpData['user_type'] == 'farmer') {
+                $callback_data = [
+                    'process_id' => BOT_PROCESS__FARMER_PANEL,
+                ];
+            } else
+                $callback_data = [
                     'process_id' => BOT_PROCESS__NAME__ADMIN_PANEL,
                     'ent' => BOT_PROCESS__ADD_AD,
                     's' => false
-                ])
+                ];
+            print_r($callback_data);
+            $options = $this->botService->appendInlineKeyboardButton($options, [[
+                'text' => '❌ انصراف',
+                'callback_data' => json_encode($callback_data)
             ]]);
         }
         if ($send)
@@ -795,6 +817,392 @@ class ads extends Controller
         }
         if ($send)
             $this->botService->send('editMessageText', $options, $back);
+    }
+
+    function farmerAds ($entry = null)
+    {
+        $subProcess = $this->botUser->currentProcess->pivot->sub_process;
+        $tmpData = json_decode($this->botUser->currentProcess->pivot->tmp_data, true);
+        $options['text'] = '';
+        $send = false;
+        $back = false;
+        $dontDeleteMessage = false;
+        $hold = false;
+        $cancelButton = false;
+
+        if ($entry && isset($entry['entry'])) {
+            switch ($entry['entry']) {
+                case 'custom_message':
+                {
+                    $options['text'] .= $entry['message'];
+                    break;
+                }
+                default:
+                {
+                    $options['text'] .= constant('BOT_MESSAGE__ENTRY__' . strtoupper($entry['entry']));
+                    break;
+                }
+            }
+        }
+
+        switch ($subProcess) {
+            default:
+            {
+                $this->botService->removeChatHistory([
+                    ['message_type', '=', 'ad_display_ad']
+                ]);
+                if (!isset($entry['page']))
+                    $entry['page'] = $tmpData['ads_page'] ?? 0;
+                $page = $entry['page'];
+                $adsCount = count(teAd::where('creator_user_id', $this->botUser->user_id)->get());
+                $pagesCount = floor($adsCount / 10);
+                if ($adsCount % 10 != 0)
+                    $pagesCount++;
+                $where = [
+                    ['creator_user_id', '=', $this->botUser->user_id]
+                ];
+                if (isset($entry['srch'])) {
+                    $page = 0;
+                    $search = $entry['srch'];
+                    $where[] = ['title', 'like', "%$search%"];
+                    $ads = teAd::where($where)->orWhere('id', $search)->skip($page * 10)->take(10)->get();
+                } else
+                    $ads = teAd::where($where)->skip($page * 10)->take(10)->get();
+                $this->botService->updateProcessData([
+                    'tmp_data' => $this->botService->addJsonDataset(
+                        $this->botUser->currentProcess->pivot->tmp_data,
+                        'ads_page',
+                        $page
+                    )
+                ]);
+                $keyboard = [];
+                if (!count($ads) && isset($entry['srch'])) {
+                    $options['text'] = '❌ آگهی ای با این عنوان یا شناسه یافت نشد، لطفا مجدد سعی کنید';
+                    $options['reply_markup'] = json_encode([
+                        'inline_keyboard' => [
+                            [
+                                [
+                                    'text' => 'بازگشت به آگهی ها',
+                                    'callback_data' => json_encode([
+                                        'sub_process' => ''
+                                    ])
+                                ]
+                            ]
+                        ]
+                    ]);
+                    goto farmer_ads_default_skipToSend;
+                } else if (!count($ads)) {
+                    $options['text'] = '❌ آگهی ای برای نمایش وجود ندارد';
+                    goto farmer_ads_default_skipToSend;
+                }
+                foreach ($ads as $ad) {
+                    $text = $ad->title ?? 'آگهی کد: ' . $ad->id;
+                    $keyboard[] = [
+                        'text' => '📃 ' . $text,
+                        'callback_data' => json_encode([
+                            'ty' => 'ad',
+                            'aid' => $ad->id
+                        ])
+                    ];
+                }
+                $keyboard = array_chunk($keyboard, 2);
+
+                $options['text'] .= "کشاورز عزیز، در لیست زیر آگهی های خود را مشاهده می کنید\nآگهی ها به صورت دسته 10 تایی نمایش داده می شود، اگر آگهی های شما بیش از 10 عدد است و آگهی خود را در لیست زیر مشاهده نمی کنید با استفاده از دکمه های 'صفحه بعد' و 'صفحه قبل' اقدام به جابجایی بین دسته های آگهی کنید\n\n📃 لطفا آگهی مورد نظر را از لیست زیر انتخاب کنید\n\nهمچنین می توانید با ارسال عنوان یا شناسه آگهی، آگهی مورد نظر را جستجو کنید";
+
+                $paginationButtons = [];
+                if ($page) {
+                    $paginationButtons[] = [
+                        'text' => 'صفحه قبل ⬅️',
+                        'callback_data' => json_encode([
+                            'ty' => 'pg',
+                            'dir' => 'back'
+                        ])
+                    ];
+                }
+                $keyboard[][] = [
+                    'text' => "🗒 صفحه " . strval($page + 1) . " از " . $pagesCount . ' 🗒',
+                    'callback_data' => 'null'
+                ];
+                if ($page + 1 < $pagesCount) {
+                    $paginationButtons[] = [
+                        'text' => '➡️ صفحه بعد',
+                        'callback_data' => json_encode([
+                            'ty' => 'pg',
+                            'dir' => 'next'
+                        ])
+                    ];
+                }
+                $keyboard = array_merge($keyboard, [
+                    $paginationButtons
+                ]);
+
+                $options['reply_markup'] = json_encode([
+                    'inline_keyboard' => $keyboard
+                ]);
+                farmer_ads_default_skipToSend:
+                $back = true;
+                $cancelButton = false;
+                $send = true;
+                $this->botService->updateProcessData([
+                    'sub_process' => 'ads_select'
+                ]);
+                break;
+            }
+            case 'ads_select':
+            {
+                if ($this->botUpdate->detectType() == 'callback_query') {
+                    $callbackData = json_decode($this->botUpdate->callbackQuery->data, true);
+                    if ($callbackData['ty'] == 'ad') {
+                        $ad = teAd::find($callbackData['aid']);
+                        $adTitle = $ad->title ?? 'بدون عنوان';
+                        $adBody = $ad->ad_text;
+                        $adState = $ad->state;
+                        switch ($adState) {
+                            case BOT__AD__STATE__RESERVED:
+                            {
+                                $adState = 'در انتظار تأیید';
+                                break;
+                            }
+                            case BOT__AD__STATE__CONFIRMED:
+                            {
+                                $adState = 'تأیید شده (هنوز ارسال نشده)';
+                                break;
+                            }
+                            case BOT__AD__STATE__SENT:
+                            {
+                                $adState = 'ارسال شده';
+                                break;
+                            }
+                            case BOT__AD__STATE__PROMISED:
+                            {
+                                $adState = 'تکمیل ظرفیت شده';
+                                break;
+                            }
+                            case BOT__AD__STATE__EXPIRED:
+                            {
+                                $adState = 'منقضی شده';
+                                break;
+                            }
+                            case BOT__AD__STATE__REJECTED:
+                            {
+                                $adState = 'رد شده';
+                                break;
+                            }
+                        }
+                        switch ($ad->target_sex) {
+                            case 'all':
+                            {
+                                $sex = '🙎🏻‍♂️🙍🏻‍♀️ فرقی نمی کند';
+                                break;
+                            }
+                            case 'man':
+                            {
+                                $sex = '🙎🏻‍♂️ آقا';
+                                break;
+                            }
+                            case 'woman':
+                            {
+                                $sex = '🙍🏻‍♀️ خانم';
+                                break;
+                            }
+                            default:
+                            {
+                                $sex = 'نا مشخص';
+                                break;
+                            }
+                        }
+                        $city = (City::find($ad->city_id))->name;
+                        if ($ad->village_id) {
+                            $village = (Village::find($ad->village_id))->name;
+                        }
+                        $validTime = $ad->valid_time / 60 / 60;
+                        $workerCount = $ad->worker_count;
+                        $workerCategory = $ad->workerCategory->title;
+                        $acceptorCount = count($ad->sents()->where('state', BOT__SENT_AD__STATE__AGREED)->get());
+                        $options['caption'] = "وضعیت آگهی: $adState\n";
+                        $options['caption'] .= "عنوان آگهی: $adTitle\n";
+                        $options['caption'] .= "جنسیت: $sex\n";
+                        $options['caption'] .= "شهر: $city\n";
+                        if (isset($village))
+                            $options['caption'] .= "روستا : $village\n";
+                        $options['caption'] .= "مدت اعتبار آگهی پس از ارسال: $validTime ساعت\n";
+                        $options['caption'] .= "تعداد کارگر مورد نیاز: $workerCount نفر\n";
+                        $options['caption'] .= "نوع کارگر مورد نیاز: $workerCategory \n\n";
+                        $options['caption'] .= "متن آگهی: $adBody\n";
+
+                        $options['reply_markup'] = json_encode([
+                            'inline_keyboard' => [
+                                [
+                                    [
+                                        'text' => "پذیرندگان ($acceptorCount نفر)",
+                                        'callback_data' => json_encode([
+                                            'ty' => 'acs', // accepts users
+                                            'aid' => $ad->id
+                                        ])
+                                    ]
+                                ],
+                                [
+                                    [
+                                        'text' => '🗑 حذف آگهی',
+                                        'callback_data' => json_encode([
+                                            'ty' => 'del',
+                                            'aid' => $ad->id
+                                        ])
+                                    ]
+                                ],
+                                [
+                                    [
+                                        'text' => 'بازگشت به آگهی ها',
+                                        'callback_data' => json_encode([
+                                            'sub_process' => ''
+                                        ])
+                                    ]
+                                ]
+                            ]
+                        ], JSON_UNESCAPED_UNICODE);
+                        $hold = [
+                            'message_type' => 'ad_display_ad'
+                        ];
+                        $options['text'] .= $options['caption'];
+                        if (strlen($options['caption']) <= 1010 && $ad->photo_file_id) {
+                            $options['photo'] = $ad->photo_file_id;
+                            $this->botService->send('sendPhoto', $options, $back, $dontDeleteMessage, $hold);
+                        } else {
+                            if ($ad->photo_file_id) {
+                                $optionsForPhoto['photo'] = $ad->photo_file_id;
+                                $this->botService->send('sendPhoto', $optionsForPhoto, $back, $dontDeleteMessage, $hold);
+                            }
+                            $hold = false;
+                            $send = true;
+                            $cancelButton = false;
+                        }
+                        $this->botService->updateProcessData([
+                            'sub_process' => 'ad_actions'
+                        ]);
+
+                    } else {
+                        switch ($callbackData['dir']) {
+                            case 'next':
+                            {
+                                $this->botService->handleProcess(null, [
+                                    'page' => ($tmpData['ads_page'] + 1)
+                                ], [
+                                    'sub_process' => ''
+                                ]);
+                                break;
+                            }
+                            case 'back':
+                            {
+                                $this->botService->handleProcess(null, [
+                                    'page' => ($tmpData['ads_page'] - 1)
+                                ], [
+                                    'sub_process' => ''
+                                ]);
+                                break;
+                            }
+                        }
+                    }
+                } elseif ($this->botUpdate->detectType() == 'message' && $this->botUpdate->getMessage()->detectType() == 'text') {
+                    $this->botService->handleProcess(null, [
+                        'srch' => $this->botUpdate->getMessage()->text
+                    ], [
+                        'sub_process' => ''
+                    ]);
+                } else {
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'invalid'
+                    ], [
+                        'sub_process' => ''
+                    ]);
+                }
+                break;
+            }
+            case 'ad_actions':
+            {
+                if ($this->botUpdate->detectType() == 'callback_query') {
+                    $callbackData = json_decode($this->botUpdate->callbackQuery->data, true);
+                    $ad = teAd::find($callbackData['aid']);
+                    switch ($callbackData['ty']) {
+                        case 'del':
+                        {
+                            if (!$ad)
+                                return;
+                            if ($this->adService->absoluteDelAd($callbackData['aid'])) {
+                                if ($ad->photo_file_id) {
+                                    $message = $this->botUpdate->getMessage()->caption;
+                                    $options['caption'] = "$message\n\n✅ آگهی با موفقیت حذف شد";
+                                    $type = 'editMessageCaption';
+                                } else {
+                                    $message = $this->botUpdate->getMessage()->text;
+                                    $options['text'] = "$message\n\n✅ آگهی با موفقیت حذف شد";
+                                    $type = 'editMessageText';
+                                }
+
+                                $options['reply_markup'] = json_encode([
+                                    'inline_keyboard' => [
+                                        [
+                                            [
+                                                'text' => 'بازگشت به آگهی ها',
+                                                'callback_data' => json_encode([
+                                                    'sub_process' => ''
+                                                ])
+                                            ]
+                                        ]
+                                    ]
+                                ]);
+                                $options['chat_id'] = $this->botUser->chat_id;
+                                $options['message_id'] = $this->botUpdate->getMessage()->messageId;
+
+                                $this->botService->sendBase($type, $options);
+
+                            }
+                            break;
+                        }
+                        case 'acs':
+                        {
+                            $this->botService->handleProcess(BOT_PROCESS__AD_ACCEPTORS, [
+                                'entry' => [
+                                    'aid' => $callbackData['aid']
+                                ]
+                            ]);
+                            break;
+                        }
+                    }
+                } else {
+                    $options['text'] = '🚫 مقدار ارسالی معتبر نیست، لطفا از دکمه های آگهی استفاده کنید';
+                    $options['reply_markup'] = json_encode([
+                        'inline_keyboard' => [
+                            [
+                                [
+                                    'text' => 'بازگشت به آگهی ها',
+                                    'callback_data' => json_encode([
+                                        'sub_process' => ''
+                                    ])
+                                ]
+                            ]
+                        ]
+                    ]);
+                    $dontDeleteMessage = [
+                        'message_type' => 'ad_display'
+                    ];
+                    $send = true;
+                    goto farmer_ads_skipToSend;
+                }
+                break;
+            }
+        }
+        farmer_ads_skipToSend:
+        if ($cancelButton) {
+            $options = $this->botService->appendInlineKeyboardButton($options, [[
+                'text' => '❌ انصراف',
+                'callback_data' => json_encode([
+                    'process_id' => BOT_PROCESS__NAME__ADMIN_PANEL,
+                    'ent' => BOT_PROCESS__ADD_AD
+                ])
+            ]]);
+        }
+        if ($send)
+            $this->botService->send('editMessageText', $options, $back, $dontDeleteMessage, $hold);
     }
 
     function ads_1 ($entry = [])
@@ -963,14 +1371,18 @@ class ads extends Controller
                             $village = (Village::find($ad->village_id))->name;
                         }
                         $validTime = $ad->valid_time / 60 / 60;
+                        $workerCount = $ad->worker_count;
+                        $workerCategory = $ad->workerCategory->title;
                         $options['caption'] = "سازنده آگهی: $creatorName\n";
                         $options['caption'] .= "عنوان آگهی: $adTitle\n";
-                        $options['caption'] .= "جنسیت : $sex\n";
-                        $options['caption'] .= "شهر : $city\n";
+                        $options['caption'] .= "جنسیت: $sex\n";
+                        $options['caption'] .= "شهر: $city\n";
                         if (isset($village))
                             $options['caption'] .= "روستا : $village\n";
-                        $options['caption'] .= "مدت اعتبار آگهی : $validTime ساعت\n\n";
-                        $options['caption'] .= "متن آگهی : $adBody\n";
+                        $options['caption'] .= "مدت اعتبار آگهی: $validTime ساعت\n\n";
+                        $options['caption'] .= "تعداد کارگر مورد نیاز: $workerCount نفر\n";
+                        $options['caption'] .= "نوع کارگر مورد نیاز: $workerCategory \n\n";
+                        $options['caption'] .= "متن آگهی: $adBody\n";
                         $options['reply_markup'] = json_encode([
                             'inline_keyboard' => [
                                 [
@@ -1163,6 +1575,103 @@ class ads extends Controller
 
     }
 
+    function adAcceptors ($entry = null)
+    {
+        if (isset($entry['entry'])) {
+            if (gettype($entry['entry']) == 'string')
+                $entry['entry'] = json_decode($entry['entry'],true);
+            if (isset($entry['entry']['aid'])) {
+                $this->botService->updateProcessData([
+                    'tmp_data' => $this->botService->addJsonDataset(
+                        $this->botUser->currentProcess->pivot->tmp_data,
+                        'ad_id',
+                        $entry['entry']['aid']
+                    )
+                ]);
+            }
+        }
+        $subProcess = $this->botUser->currentProcess->pivot->sub_process;
+        $tmpData = json_decode($this->botUser->currentProcess->pivot->tmp_data, true);
+        $options['text'] = '';
+        $send = false;
+        $back = false;
+        $dontDeleteMessage = false;
+        $hold = false;
+        $cancelButton = false;
+        $type = 'editMessageText';
+        if (!isset($tmpData['ad_id']))
+            return;
+        $ad = teAd::find($tmpData['ad_id']);
+        if ($entry && isset($entry['entry'])) {
+            switch ($entry['entry']) {
+                case 'custom_message':
+                {
+                    $options['text'] .= $entry['message'];
+                    break;
+                }
+                default:
+                {
+                    $options['text'] .= @constant('BOT_MESSAGE__ENTRY__' . strtoupper($entry['entry']));
+                    break;
+                }
+            }
+        }
+        switch ($subProcess) {
+            default:
+            {
+                $adTitle = $ad->title ?? 'بدون عنوان';
+                $adCode = $ad->id;
+                $options['text'] .= "پذیرندگان آگهی کار: $adTitle\n\n کد آگهی($adCode)در لیست زیر میتوانید نام پذیرندگان آگهی را ببینید، در صورت تمایل به ارسال پیغام برای همه آنها میتوانید از دکمه ارسال پیام به همه استفاده کنید\n\nهمچنین می توانید با انتخاب هر کدام مشخصات آنها را مشاهده کنید و پیام خصوصی ارسال کنید";
+
+                $adAcceptor = $ad->sents()->where('state', BOT__SENT_AD__STATE__AGREED)->get()->pluck('user');
+                $keyboard = [
+                    [
+                        [
+                            'text' => 'ارسال پیام به همه',
+                            'callback_data' => json_encode([
+                                'sub_process' => 'msg_all'
+                            ])
+                        ]
+                    ]
+                ];
+                foreach ($adAcceptor as $user) {
+                    $keyboard[][] = [
+                        'text' => '-- ' . $user->profile->full_name . ' --',
+                        'callback_data' => json_encode([
+                            'src' => 'ad',
+                            'a' => 'pr',
+                            'srid' => ($user->receiveAds()->where('ad_id', $tmpData['ad_id'])->first())->id
+                        ])
+                    ];
+                }
+                $options['reply_markup'] = json_encode([
+                    'inline_keyboard' => $keyboard
+                ]);
+                $back = true;
+                if ($ad->photo_file_id) {
+                    $type = 'sendMessage';
+                    $hold = [
+                        'message_type' => 'ad_display_ad'
+                    ];
+                }
+                $send = true;
+                break;
+            }
+        }
+
+        if ($cancelButton) {
+            $options = $this->botService->appendInlineKeyboardButton($options, [[
+                'text' => '❌ انصراف',
+                'callback_data' => json_encode([
+                    'process_id' => BOT_PROCESS__NAME__ADMIN_PANEL,
+                    'ent' => BOT_PROCESS__ADD_AD
+                ])
+            ]]);
+        }
+        if ($send)
+            $this->botService->send($type, $options, $back, $dontDeleteMessage, $hold);
+    }
+
     function handleUserAdActions ($a)
     {
         $callbackData = json_decode($this->botUpdate->callbackQuery->data, true);
@@ -1278,6 +1787,8 @@ class ads extends Controller
         $agreedAds = $ad->sents()->where('state', BOT__SENT_AD__STATE__AGREED)->get();
         if (count($agreedAds) >= $ad->worker_count) {
             $ad->state = BOT__AD__STATE__PROMISED;
+            $adTitle = $ad->title ?? 'بدون عنوان';
+            $adCode = $ad->id;
             foreach ($ad->sents as $sent) {
                 if ($sent->chat_id == $this->botUser->chat_id)
                     continue;
@@ -1291,21 +1802,30 @@ class ads extends Controller
                                     'text' => '⛔️ تکمیل شد ⛔️',
                                     'callback_data' => 'null'
                                 ]
-                            ],
-                            [
-                                [
-                                    'text' => '🗑 پاک کردن آگهی',
-                                    'callback_data' => json_encode([
-                                        'src' => 'ad',
-                                        'a' => 'del',
-                                        'aid' => $ad->id
-                                    ])
-                                ]
                             ]
                         ]
                     ])
                 ]);
             }
+            $this->botService->sendBase('sendMessage', [
+                'chat_id' => $ad->creator_user_id,
+                'text' => "🔔 اطلاعیه آگهی\n\nکارگرانی که برای آگهی $adTitle کد ($adCode) نیاز داشتید فراهم شد",
+                'reply_markup' => json_encode([
+                    'inline_keyboard' => [
+                        [
+                            [
+                                'text' => 'لیست پذیرندگان این آگهی',
+                                'callback_data' => json_encode([
+                                    'process_id' => BOT_PROCESS__AD_ACCEPTORS,
+                                    'ent' => json_encode([
+                                        'aid' => $ad->id
+                                    ])
+                                ])
+                            ]
+                        ]
+                    ]
+                ])
+            ]);
         }
 
         $ad->save();
@@ -1383,7 +1903,7 @@ class ads extends Controller
                         $type = 'sendMessage';
                         $send = true;
                         $log = true;
-                    }else {
+                    } else {
                         $agreeUser = $sentRecord->user->profile->full_name;
                         $options['text'] = "چت شما با '$agreeUser' با موفقت خاتمه یافت.\n\nدر حال انتقال به منوی اصلی";
                         $options['reply_markup'] = json_encode([
@@ -1393,7 +1913,7 @@ class ads extends Controller
                         $this->botService->send('sendMessage', $options, false);
                         $this->botService->handleProcess(BOT_PROCESS__MAIN);
                     }
-                }else {
+                } else {
                     $options['text'] = '⛔️ مقدار ارسالی مجاز نیست، لطفا فقط متن ارسال کنید';
                     $options['chat_id'] = $this->botUser->chat_id;
                     $type = 'sendMessage';
@@ -1487,7 +2007,7 @@ class ads extends Controller
                         $type = 'sendMessage';
                         $send = true;
                         $log = true;
-                    }else {
+                    } else {
                         $agreeUser = $sentRecord->user->profile->full_name;
                         $options['text'] = "چت شما با '$agreeUser' با موفقت خاتمه یافت.\n\nدر حال انتقال به منوی اصلی";
                         $options['reply_markup'] = json_encode([
@@ -1497,7 +2017,7 @@ class ads extends Controller
                         $this->botService->send('sendMessage', $options, false);
                         $this->botService->handleProcess(BOT_PROCESS__MAIN);
                     }
-                }else {
+                } else {
                     $options['text'] = '⛔️ مقدار ارسالی مجاز نیست، لطفا فقط متن ارسال کنید';
                     $options['chat_id'] = $this->botUser->chat_id;
                     $type = 'sendMessage';
@@ -1520,7 +2040,8 @@ class ads extends Controller
             }
     }
 
-    function logChat($from, $to, $data) {
+    function logChat ($from, $to, $data)
+    {
         $log = new chatLog();
         $log->from = $from;
         $log->to = $to;

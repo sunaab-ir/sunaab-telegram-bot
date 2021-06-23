@@ -12,6 +12,7 @@ use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Facades\Log;
 use Telegram\Bot\Api;
+use Telegram\Bot\Exceptions\TelegramResponseException;
 use Telegram\Bot\Laravel\Facades\Telegram;
 use Telegram\Bot\Objects\User;
 
@@ -20,10 +21,10 @@ class botService
     protected $botUser;
     protected $botUpdate;
 
-    public function __construct ()
+    public function __construct ($user = null, $update = null)
     {
-        $this->botUser = request()->botUser;
-        $this->botUpdate = request()->botUpdate;
+        $this->botUser = $user ?? request()->botUser;
+        $this->botUpdate = $update ?? request()->botUpdate;
     }
 
     function handleProcess ($Process = null, $Params = null, $processData = [])
@@ -150,7 +151,7 @@ class botService
         } catch (ConnectException $e) {
             Log::emergency('VPN Dont Work!');
             goto resendToTelegram;
-        } catch (\Exception $exception) {
+        } catch (TelegramResponseException $exception) {
             Log::error($exception->getCode() . " -------------- " . $exception->getMessage());
             echo $exception->getCode() . " ------\n-------- " . $exception->getMessage() . "\n\n";
             if ($exception->getCode() == 400) {
@@ -228,8 +229,10 @@ class botService
                 $response = Telegram::setAsyncRequest(true)->$type($options);
             else
                 $response = Telegram::$type($options);
-        } catch (\Exception $exception) {
-            Log::error($exception);
+        } catch (TelegramResponseException $exception) {
+            Log::error($exception->getMessage());
+            if ($exception->getMessage() == BOT_ERROR__FORBIDDEN_BLOCKED_BY_USER)
+                return;
             if ($type == 'sendPhoto') {
                 $type = 'sendMessage';
                 goto resendSendBaseToTelegram;

@@ -20,6 +20,9 @@ const BOT_PROCESS__ADD_AD = 'add_ad';
 const BOT_PROCESS__ADS = 'ads';
 const BOT_PROCESS__ADS_SEND_AGREE_MESSAGE = 'adssndagrmsg';
 const BOT_PROCESS__ADS_SEND_REPLY_AGREE_MESSAGE = 'adssndrplyagrmsg';
+const BOT_PROCESS__FARMER_PANEL = 'farmer_panel';
+const BOT_PROCESS__FARMER_ADS = 'farmer_ads';
+const BOT_PROCESS__AD_ACCEPTORS = 'ad_acceptors';
 
 
 

@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class teAd extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
 
     function creator() {
@@ -22,5 +23,8 @@ class teAd extends Model
     }
     function village() {
         return $this->belongsTo(Village::class, 'village_id');
+    }
+    function workerCategory() {
+        return $this->belongsTo(workCategory::class, 'work_category');
     }
 }

@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class sentAd extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     function user() {
         return $this->belongsTo(telUser::class, 'user_id', 'user_id');
