@@ -1841,6 +1841,13 @@ class ads extends Controller
             ]);
         }
         $tmpData = json_decode($this->botUser->currentProcess->pivot->tmp_data, true);
+
+        if (!isset($tmpData['sent_record_id'])) {
+            $options['text'] = '⛔️ غیر مجاز';
+            $this->botService->send('sendMessage', $options);
+            return;
+        }
+
         $sentRecord = sentAd::find($tmpData['sent_record_id']);
         $sub_process = $this->botUser->currentProcess->pivot->sub_process;
 
@@ -1856,18 +1863,7 @@ class ads extends Controller
 
                 $options['message_id'] = $this->botUpdate->callbackQuery->message->messageId;
                 $options['chat_id'] = $this->botUser->chat_id;
-                $options['text'] = "📝 لطفا متن مورد نظر جهت ارسال به کاربر را ارسال کنید\n\nپس از اتمام ارسال پیام، می توانید با زدن دکمه 'پایان ارسال' به ارسال پیام خاتمه دهید\n\n⚠️ پیغام شما فقط می تواند از نوع متنی باشد";
-                $options['reply_markup'] = json_encode([
-                    'keyboard' => [
-                        [
-                            [
-                                'text' => 'پایان ارسال'
-                            ]
-                        ]
-                    ],
-                    'resize_keyboard' => true,
-                    'one_time_keyboard' => true
-                ]);
+                $options['text'] = "📝 لطفا متن مورد نظر جهت ارسال به کاربر را ارسال کنید\n\n⚠️ پیغام شما فقط می تواند از نوع متنی باشد";
                 $send = true;
                 $type = 'sendMessage';
 
@@ -1903,22 +1899,24 @@ class ads extends Controller
                         $type = 'sendMessage';
                         $send = true;
                         $log = true;
-                    } else {
-                        $agreeUser = $sentRecord->user->profile->full_name;
-                        $options['text'] = "چت شما با '$agreeUser' با موفقت خاتمه یافت.\n\nدر حال انتقال به منوی اصلی";
-                        $options['reply_markup'] = json_encode([
-                            'remove_keyboard' => true
+                        $this->botService->updateProcessData([
+                            'sub_process' => 'pending'
                         ]);
-
-                        $this->botService->send('sendMessage', $options, false);
-                        $this->botService->handleProcess(BOT_PROCESS__MAIN);
                     }
-                } else {
+                }
+                else {
                     $options['text'] = '⛔️ مقدار ارسالی مجاز نیست، لطفا فقط متن ارسال کنید';
                     $options['chat_id'] = $this->botUser->chat_id;
                     $type = 'sendMessage';
                     $send = true;
                 }
+                break;
+            }
+            case 'pending': {
+                $type = 'sendMessage';
+                $options['chat_id'] = $this->botUser->chat_id;
+                $options['text'] = "⛔️ غیر مجاز\n\nدر صورتی که میخواهید به پیام رسانی ادامه دهید، دکمه 'ادامه' در پیغام تحویل را بزنید";
+                $send = true;
                 break;
             }
         }
@@ -1927,7 +1925,26 @@ class ads extends Controller
             if ($response = $this->botService->sendBase($type, $options)) {
                 if ($log) {
                     $options = [];
-                    $options['text'] = "✔️ تحویل شد";
+                    $options['text'] = "✔️ تحویل شد\n\nاگر هنوز میخواهید به این کاربر پیام بفرستید لطفا دکمه 'ادامه' را بزنید در غیر اینصورت دکمه 'پایان چت' را بزنید";
+                    $options['reply_markup'] = json_encode([
+                       'inline_keyboard' => [
+                           [
+                               [
+                                   'text' => 'ادامه',
+                                   'callback_data' => json_encode([
+                                       'process_id' => BOT_PROCESS__ADS_SEND_AGREE_MESSAGE,
+                                       'sub_process' => ''
+                                   ])
+                               ],
+                               [
+                                   'text' => 'پایان چت',
+                                   'callback_data' => json_encode([
+                                       'process_id' => BOT_PROCESS__MAIN
+                                   ])
+                               ]
+                           ]
+                       ]
+                    ]);
                     $options['chat_id'] = $this->botUser->chat_id;
                     $this->botService->sendBase('sendMessage', $options);
 
@@ -1946,6 +1963,13 @@ class ads extends Controller
             ]);
         }
         $tmpData = json_decode($this->botUser->currentProcess->pivot->tmp_data, true);
+
+        if (!isset($tmpData['sent_record_id'])) {
+            $options['text'] = '⛔️ غیر مجاز';
+            $this->botService->send('sendMessage', $options);
+            return;
+        }
+
         $sentRecord = sentAd::find($tmpData['sent_record_id']);
         $sub_process = $this->botUser->currentProcess->pivot->sub_process;
 
@@ -1954,24 +1978,12 @@ class ads extends Controller
         $send = false;
         $log = false;
         $type = 'editMessageText';
-
         switch ($sub_process) {
             default:
             {
                 $options['message_id'] = $this->botUpdate->callbackQuery->message->messageId;
                 $options['chat_id'] = $this->botUser->chat_id;
-                $options['text'] = "📝 لطفا متن مورد نظر جهت ارسال به کاربر را ارسال کنید\n\nپس از اتمام ارسال پیام، می توانید با زدن دکمه '📨 پایان ارسال' به ارسال پیام خاتمه دهید\n\n⚠️ پیغام شما فقط می تواند از نوع متنی باشد";
-                $options['reply_markup'] = json_encode([
-                    'keyboard' => [
-                        [
-                            [
-                                'text' => '📨 پایان ارسال'
-                            ]
-                        ]
-                    ],
-                    'resize_keyboard' => true,
-                    'one_time_keyboard' => true
-                ]);
+                $options['text'] = "📝 لطفا متن مورد نظر جهت ارسال به کاربر را ارسال کنید\n\n⚠️ پیغام شما فقط می تواند از نوع متنی باشد";
                 $send = true;
                 $type = 'sendMessage';
 
@@ -1980,10 +1992,9 @@ class ads extends Controller
                 ]);
                 break;
             }
-            case 'send_agree_message_input':
-            {
+            case 'send_agree_message_input': {
                 if ($this->botUpdate->detectType() == 'message' && $this->botUpdate->getMessage()->detectType() == 'text') {
-                    if ($this->botUpdate->getMessage()->text != '📨 پایان ارسال') {
+
                         $message = $this->botUpdate->getMessage()->text;
                         $senderFullName = $this->botUser->profile->full_name;
                         $senderId = $this->botUser->user_id;
@@ -2007,16 +2018,9 @@ class ads extends Controller
                         $type = 'sendMessage';
                         $send = true;
                         $log = true;
-                    } else {
-                        $agreeUser = $sentRecord->user->profile->full_name;
-                        $options['text'] = "چت شما با '$agreeUser' با موفقت خاتمه یافت.\n\nدر حال انتقال به منوی اصلی";
-                        $options['reply_markup'] = json_encode([
-                            'remove_keyboard' => true
+                        $this->botService->updateProcessData([
+                            'sub_process' => 'pending'
                         ]);
-
-                        $this->botService->send('sendMessage', $options, false);
-                        $this->botService->handleProcess(BOT_PROCESS__MAIN);
-                    }
                 } else {
                     $options['text'] = '⛔️ مقدار ارسالی مجاز نیست، لطفا فقط متن ارسال کنید';
                     $options['chat_id'] = $this->botUser->chat_id;
@@ -2025,13 +2029,39 @@ class ads extends Controller
                 }
                 break;
             }
+            case 'pending': {
+                $type = 'sendMessage';
+                $options['chat_id'] = $this->botUser->chat_id;
+                $options['text'] = "⛔️ غیر مجاز\n\nدر صورتی که میخواهید به پیام رسانی ادامه دهید، دکمه 'ادامه' در پیغام تحویل را بزنید";
+                $send = true;
+                break;
+            }
         }
 
         if ($send)
             if ($response = $this->botService->sendBase($type, $options)) {
                 if ($log) {
                     $options = [];
-                    $options['text'] = "✔️ تحویل شد";
+                    $options['text'] = "✔️ تحویل شد\n\nاگر هنوز میخواهید به این کاربر پیام بفرستید لطفا دکمه 'ادامه' را بزنید در غیر اینصورت دکمه 'پایان چت' را بزنید";
+                    $options['reply_markup'] = json_encode([
+                        'inline_keyboard' => [
+                            [
+                                [
+                                    'text' => 'ادامه',
+                                    'callback_data' => json_encode([
+                                        'process_id' => BOT_PROCESS__ADS_SEND_REPLY_AGREE_MESSAGE,
+                                        'sub_process' => ''
+                                    ])
+                                ],
+                                [
+                                    'text' => 'پایان چت',
+                                    'callback_data' => json_encode([
+                                        'process_id' => BOT_PROCESS__MAIN
+                                    ])
+                                ]
+                            ]
+                        ]
+                    ]);
                     $options['chat_id'] = $this->botUser->chat_id;
                     $this->botService->sendBase('sendMessage', $options);
 
