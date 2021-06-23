@@ -109,7 +109,8 @@ class main extends Controller
                         'process_id' => BOT_PROCESS__ADMIN_PANEL
                     ]),
                 ];
-            $options['text'] .= "از منوی زیر چیزی که میخوای رو انتخاب کن 🔰";
+            $options['text'] .= "از منوی زیر چیزی که میخوای رو انتخاب کن 🔰\n\nبرای اتصال به پروکسی پرسرعت ساناب <a href='tg://proxy?server=146.59.38.250&port=443&secret=ee2e494cc3e34c72e3177038c349fabbd37777772e73756e6161622e6972'>این متن آبی</a> رو لمس کن و بعد اتصال پروکسی رو بزن";
+            $options['parse_mode'] = 'html';
             $options['reply_markup'] = json_encode([
                 'inline_keyboard' => $keyboard
             ]);
