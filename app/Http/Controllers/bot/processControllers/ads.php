@@ -667,6 +667,9 @@ class ads extends Controller
             }
             case 'finish':
             {
+                $this->botService->removeChatHistory([
+                    ['message_type', '=', 'ad_display']
+                ]);
                 $ad_data = json_decode($this->botUser->currentProcess->pivot->tmp_data, true);
                 $tel_ad = new teAd();
                 $tel_ad->creator_user_id = $this->botUser->user_id;
@@ -707,7 +710,6 @@ class ads extends Controller
                     'ent' => BOT_PROCESS__ADD_AD,
                     's' => false
                 ];
-            print_r($callback_data);
             $options = $this->botService->appendInlineKeyboardButton($options, [[
                 'text' => '❌ انصراف',
                 'callback_data' => json_encode($callback_data)
