@@ -276,12 +276,10 @@ class botService
         return json_encode($ADataset, JSON_UNESCAPED_UNICODE);
     }
 
-    function removeChatHistory ($where = null)
+    function removeChatHistory ($where = [])
     {
-        if ($where)
-            $messages = telBotMessage::where($where)->get();
-        else
-            $messages = telBotMessage::all();
+        $where['chat_id'] = $this->botUser->chat_id;
+        $messages = telBotMessage::where($where)->get();
 
         foreach ($messages as $message) {
             if ((time() - $message->time) < 172800) {
