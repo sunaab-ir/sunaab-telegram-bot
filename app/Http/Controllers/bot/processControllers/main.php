@@ -70,7 +70,7 @@ class main extends Controller
             }
             else{
                 $keyboard[][] = [
-                    'text' => "پنل کشاورز",
+                    'text' => "پنل کارفرما",
                     'callback_data' => json_encode([
                         'process_id' => BOT_PROCESS__FARMER_PANEL
                     ])
@@ -156,7 +156,7 @@ class main extends Controller
             default:
             {
                 $fullName = $this->botUser->profile->full_name ?? 'بدون نام';
-                $userType = $this->botUser->profile->is_manual_worker ? "👷🏻‍♂️ کارگر" : "👨🏻‍🌾 کشاورز";
+                $userType = $this->botUser->profile->is_manual_worker ? "👷🏻‍♂️ کارگر" : "👨🏻‍🌾 کارفرما";
                 $cityName = (City::find($this->botUser->profile->city_id))->name ?? 'انتخاب نشده';
                 $isUserRural = !empty($this->botUser->profile->village_id);
                 $villageName = "";
@@ -292,7 +292,7 @@ class main extends Controller
             }
             case 'is_manual_worker':
             {
-//                $options['text'] .= 'خب، حالا مشخص کن 👷🏻‍♂️ کارگر هستی یا 👨🏻‍🌾 کشاورز 😊';
+//                $options['text'] .= 'خب، حالا مشخص کن 👷🏻‍♂️ کارگر هستی یا 👨🏻‍🌾 کارفرما 😊';
                 $options['text'] .= 'خب، حالا مشخص کن میخوای کار پیدا کنی یا کارگر میخوای';
 //                $options['reply_markup'] = json_encode([
 //                    'inline_keyboard' => [
@@ -300,7 +300,7 @@ class main extends Controller
 //                            ['text' => '👷🏻‍♂️ کارگر', 'callback_data' => json_encode([
 //                                'is_manual_worker' => true
 //                            ])],
-//                            ['text' => '👨🏻‍🌾 کشاورز', 'callback_data' => json_encode([
+//                            ['text' => '👨🏻‍🌾 کارفرما', 'callback_data' => json_encode([
 //                                'is_manual_worker' => false
 //                            ])]
 //                        ]
@@ -824,7 +824,7 @@ class main extends Controller
                     ])
                 ];
                 $keyboard[][] = [
-                    'text' => '✏️ ویرایش نوع کاربری (کشاورز یا کارگر)',
+                    'text' => '✏️ ویرایش نوع کاربری (کارفرما یا کارگر)',
                     'callback_data' => json_encode([
                         'sub_process' => 'manualWorker'
                     ])
@@ -1136,14 +1136,14 @@ class main extends Controller
             }
             case 'manualWorker':
             {
-                $options['text'] .= 'خب، حالا مشخص کن 👷🏻‍♂️ کارگر هستی یا 👨🏻‍🌾 کشاورز 😊';
+                $options['text'] .= 'خب، حالا مشخص کن 👷🏻‍♂️ کارگر هستی یا 👨🏻‍🌾 کارفرما 😊';
                 $options['reply_markup'] = json_encode([
                     'inline_keyboard' => [
                         [
                             ['text' => '👷🏻‍♂️ کارگر', 'callback_data' => json_encode([
                                 'is_manual_worker' => true
                             ])],
-                            ['text' => '👨🏻‍🌾 کشاورز', 'callback_data' => json_encode([
+                            ['text' => '👨🏻‍🌾 کارفرما', 'callback_data' => json_encode([
                                 'is_manual_worker' => false
                             ])]
                         ]

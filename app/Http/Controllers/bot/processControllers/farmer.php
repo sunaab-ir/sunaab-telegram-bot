@@ -47,7 +47,7 @@ class farmer extends Controller
         switch ($sub_process) {
             default: {
                 $farmerFullName = $this->botUser->profile->full_name;
-                $options['text'] .= "کشاورز محترم، $farmerFullName ، به پنل کشاورز خوش آمدید\n\nلطفا از منوی زیر استفاده کنید";
+                $options['text'] .= "کارفرما محترم، $farmerFullName ، به پنل کارفرما خوش آمدید\n\nلطفا از منوی زیر استفاده کنید";
 
                 $options['reply_markup'] = json_encode([
                    'inline_keyboard' => [
