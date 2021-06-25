@@ -299,7 +299,7 @@ class main extends Controller
             case 'is_manual_worker':
             {
 //                $options['text'] .= 'خب، حالا مشخص کن 👷🏻‍♂️ کارگر هستی یا 👨🏻‍🌾 کارفرما 😊';
-                $options['text'] .= 'خب، حالا مشخص کن میخوای کار پیدا کنی یا کارگر میخوای';
+                $options['text'] .= "خب، اگه کارگر میخوای، 'کارفرما هستم' رو انتخاب کن، اگه کار میخوای، 'کارگر هستم' رو انتخاب کن";
 //                $options['reply_markup'] = json_encode([
 //                    'inline_keyboard' => [
 //                        [
@@ -315,10 +315,10 @@ class main extends Controller
                 $options['reply_markup'] = json_encode([
                     'inline_keyboard' => [
                         [
-                            ['text' => '👷🏻‍♂️ کار میخوام', 'callback_data' => json_encode([
+                            ['text' => '👷🏻‍♂️ کارگر هستم', 'callback_data' => json_encode([
                                 'is_manual_worker' => true
                             ])],
-                            ['text' => '👨🏻‍🌾 کارگر میخوام', 'callback_data' => json_encode([
+                            ['text' => '👨🏻‍🌾 کارفرما هستم', 'callback_data' => json_encode([
                                 'is_manual_worker' => false
                             ])]
                         ]
