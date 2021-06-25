@@ -80,6 +80,7 @@ class group extends Controller
                                     if ($contact->save()) {
                                         $options['text'] = "مخاطب، " . $full_name . " با شماره " . $mobile . " با موفقیت در بخش 118  ربات ساناب ثبت شد\n\n بعدا برای دریافت شماره این مخاطب تنها نیاز است دقیقا متن زیر را بفرستید:\n\n/118 $full_name";
                                         $options['chat_id'] = $this->botUpdate->message->chat->id;
+                                        $options['disable_notification'] = true;
                                         $options['reply_to_message_id'] = $this->botUpdate->message->messageId;
                                         $this->botService->sendBase('sendMessage', $options);
                                         if ($this->botUpdate->message->replyToMessage) {
@@ -88,6 +89,7 @@ class group extends Controller
                                             $options['chat_id'] = $this->botUpdate->message->chat->id;
                                             $options['vcard'] = "شماره تماس " . $commandValue;
                                             $options['phone_number'] = $contact->number;
+                                            $options['disable_notification'] = true;
                                             $options['first_name'] = $contact->full_name;
                                             $this->botService->sendBase('sendContact', $options);
                                         }
@@ -95,6 +97,7 @@ class group extends Controller
                                 } else {
                                     $options['text'] = "این مخاطب در بخش 118 ربات ساناب وجود دارد، برای دریافت شماره، کافیست متن زیر را به تنهایی ارسال کنید\n\n" . "/118 " . $full_name;
                                     $options['chat_id'] = $this->botUpdate->message->chat->id;
+                                    $options['disable_notification'] = true;
                                     $options['reply_to_message_id'] = $this->botUpdate->message->messageId;
                                     $this->botService->sendBase('sendMessage', $options);
                                 }
@@ -102,6 +105,7 @@ class group extends Controller
 
                                 $options['chat_id'] = $this->botUpdate->message->chat->id;
                                 $options['reply_to_message_id'] = $this->botUpdate->message->messageId;
+                                $options['disable_notification'] = true;
                                 $options['text'] = "کاربر محترم، " . $this->botUser->first_name . "\n\n";
                                 $options['text'] .= "فرمت ارسالی شما برای ثبت در 118 روستای جابوز صحیح نیست
 مثال:
@@ -153,12 +157,14 @@ class group extends Controller
                                 $options['text'] = 'لطفا نام مخاطب را جهت جستجو به درستی وارد کنید';
                                 $options['reply_to_message_id'] = $this->botUpdate->message->messageId;
                                 $options['chat_id'] = $this->botUpdate->message->chat->id;
+                                $options['disable_notification'] = true;
                                 $this->botService->sendBase('sendMessage', $options);
                             }
                         }
                     } else {
                         $options['text'] = "☎️ بخش 118 ربات ساناب روستای جابوز\n\nجهت استفاده از 118، از دستور العمل زیر استفاده کنید\n\nدریافت شماره مخاطب:  🔰\n\n1- /118 نام و نام خانوادگی مخاطب\n2- ارسال\n\nثبت مخاطب در 118: 🔰\n\n1- /118‏\nنام و نام خانوادگی\nشماره مخاطب\n2- ارسال";
                         $options['reply_to_message_id'] = $this->botUpdate->message->messageId;
+                        $options['disable_notification'] = true;
                         $options['chat_id'] = $this->botUpdate->message->chat->id;
                         $this->botService->sendBase('sendMessage', $options);
                     }
@@ -166,6 +172,7 @@ class group extends Controller
                     $options['text'] = "⛔️ برای استفاده از 118 جابوز ربات ساناب، باید در ربات ثبت نام کامل انجلم دهید، برای ثبت نام لطفا از لینک زیر اقدام کنید\nhttps://t.me/sunaab_test_bot?start=12";
                     $options['reply_to_message_id'] = $this->botUpdate->message->messageId;
                     $options['chat_id'] = $this->botUpdate->message->chat->id;
+                    $options['disable_notification'] = true;
                     $this->botService->sendBase('sendMessage', $options);
                 }
                 break;
