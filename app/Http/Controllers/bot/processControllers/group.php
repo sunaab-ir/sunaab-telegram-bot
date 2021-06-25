@@ -53,7 +53,14 @@ class group extends Controller
 
     function handleMessageContactUpdate ()
     {
-        print_r($this->botUpdate);
+        $full_name = $this->botUpdate->message->contact->first_name . ($this->botUpdate->message->contact->last_name ? $this->botUpdate->message->contact->last_name : "");
+        $contact = m118::where("full_name", $full_name)->first();
+        if (!$contact) {
+            $m118 = new m118();
+            $m118->full_name = $full_name;
+            $m118->number = $this->botUpdate->message->contact->phone_number;
+            $m118->save();
+        }
     }
 
     function handleMessageCommandUpdate ()
