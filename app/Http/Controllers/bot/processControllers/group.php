@@ -127,7 +127,7 @@ class group extends Controller
                         } else {
                             if (strlen($commandValue) > 4) {
                                 $contact118 = m118::where("full_name", "like", "%$commandValue%")->get();
-                                if ($contact118) {
+                                if (count($contact118)) {
                                     if (count($contact118) == 1) {
                                         $contact['chat_id'] = $this->botUpdate->message->chat->id;
                                         if ($this->botUpdate->message->replyToMessage)
@@ -159,6 +159,12 @@ class group extends Controller
                                             $contacts['reply_to_message_id'] = $this->botUpdate->message->messageId;
                                         $this->botService->sendBase('sendMessage', $contacts);
                                     }
+                                } else {
+                                    $options['text'] = "🧐 مخاطبی با این نام در 118 ربات ثبت نشده است، لطفا درخواست ثبت دهید";
+                                    $options['reply_to_message_id'] = $this->botUpdate->message->messageId;
+                                    $options['chat_id'] = $this->botUpdate->message->chat->id;
+                                    $options['disable_notification'] = true;
+                                    $this->botService->sendBase('sendMessage', $options);
                                 }
                             } else {
                                 $options['text'] = 'لطفا نام مخاطب را جهت جستجو به درستی وارد کنید';
