@@ -23,7 +23,11 @@ const BOT_PROCESS__ADS_SEND_REPLY_AGREE_MESSAGE = 'adssndrplyagrmsg';
 const BOT_PROCESS__FARMER_PANEL = 'farmer_panel';
 const BOT_PROCESS__FARMER_ADS = 'farmer_ads';
 const BOT_PROCESS__AD_ACCEPTORS = 'ad_acceptors';
+const BOT_PROCESS__GRAPE_HARVEST_SESSION = 'grp_hrvst_stion';
 
 
 
 const BOT__COMMAND__SUB_PROCESS_PROFILE_VILLAGE_SEND_NAME = 'profile_village_send_name';
+
+
+

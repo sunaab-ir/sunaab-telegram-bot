@@ -55,6 +55,12 @@ class main extends Controller
                 }
             }
             $keyboard = [];
+            $keyboard[][] = [
+                'text' => '🍇 فصل برداشت انگور 🍇',
+                'callback_data' => json_encode([
+                    'process_id' => BOT_PROCESS__GRAPE_HARVEST_SESSION
+                ])
+            ];
             if ($this->botUser->profile->is_manual_worker) {
                 $keyboard = array_merge($keyboard, [
                         [
