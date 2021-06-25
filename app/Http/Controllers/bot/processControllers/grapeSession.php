@@ -73,7 +73,7 @@ class grapeSession extends Controller
                 )->get();
                 $keyboard = [];
                 foreach ($drivers as $driver) {
-                    $keyboard[][] = [
+                    $keyboard[] = [
                         'text' => "🙍🏻‍♂️ " . $driver->name,
                         'callback_data' => json_encode([
                             'sub_process' => 'driver',
@@ -81,6 +81,7 @@ class grapeSession extends Controller
                         ])
                     ];
                 }
+                $keyboard = array_chunk($keyboard, 2);
                 $options['reply_markup'] = json_encode([
                     'inline_keyboard' => $keyboard
                 ]);
