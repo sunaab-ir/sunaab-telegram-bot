@@ -24,6 +24,7 @@ const BOT_PROCESS__FARMER_PANEL = 'farmer_panel';
 const BOT_PROCESS__FARMER_ADS = 'farmer_ads';
 const BOT_PROCESS__AD_ACCEPTORS = 'ad_acceptors';
 const BOT_PROCESS__GRAPE_HARVEST_SESSION = 'grp_hrvst_stion';
+const BOT_PROCESS__ADMIN__SEND_MESSAGE_TO_ALL = 'snd_msg_all';
 
 
 
