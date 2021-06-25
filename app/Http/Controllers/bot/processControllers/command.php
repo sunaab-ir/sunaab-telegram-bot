@@ -57,6 +57,7 @@ class command extends Controller
             switch ($entryValue) {
                 case 12: {
                     $otherData->data = json_encode([
+                        'user_id' => $this->botUser->user_id,
                         'entry_source' => "group 118 jabuz"
                     ]);
                 }
