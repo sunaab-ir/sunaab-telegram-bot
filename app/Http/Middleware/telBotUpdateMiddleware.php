@@ -24,13 +24,15 @@ class telBotUpdateMiddleware
      */
     public function handle (Request $request, Closure $next)
     {
-        $request->botUpdate = Telegram::getWebhookUpdates();
+        $update = Telegram::getWebhookUpdates();
+        $request->botUpdate = $update;
         if (in_array($request->botUpdate->detectType(), [
             'message',
             'edited_message',
             'inline_query',
             'chosen_inline_result',
             'callback_query',
+            'channel_post'
         ])) {
             $user = $this->getTelUser($request);
             $request->botUser = $user;

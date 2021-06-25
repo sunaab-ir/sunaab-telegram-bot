@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\bot\processControllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\otherData;
 use App\Services\bot\botService;
 use Illuminate\Http\Request;
 
@@ -35,10 +36,33 @@ class command extends Controller
 
                 break;
             }
+            case BOT__COMMAND__SUB_PROCESS__118: {
+
+                break;
+            }
         }
     }
 
     function start() {
+        if ($this->botUser->process_type != 'normal') {
+            $this->botUser->process_type = 'normal';
+            $this->botUser->save();
+        }
+        if ($this->botUpdate->message->entities) {
+            $otherData = new otherData();
+            $otherData->name = "entry from source";
+            $entry = $this->botUpdate->getMessage()->entities[0];
+            $entryName = trim(substr($this->botUpdate->getMessage()->text, $entry['offset'] + 1, $entry['length']));
+            $entryValue = trim(substr($this->botUpdate->getMessage()->text, $entry['length'], strlen($this->botUpdate->getMessage()->text)));
+            switch ($entryValue) {
+                case 12: {
+                    $otherData->data = json_encode([
+                        'entry_source' => "group 118 jabuz"
+                    ]);
+                }
+            }
+            $otherData->save();
+        }
         $this->botService->handleProcess(BOT_PROCESS__MAIN, null, [
             'sub_process' => ''
         ]);

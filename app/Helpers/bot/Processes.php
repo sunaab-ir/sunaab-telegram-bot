@@ -29,6 +29,7 @@ const BOT_PROCESS__ADMIN__SEND_MESSAGE_TO_ALL = 'snd_msg_all';
 
 
 const BOT__COMMAND__SUB_PROCESS_PROFILE_VILLAGE_SEND_NAME = 'profile_village_send_name';
+const BOT__COMMAND__SUB_PROCESS__118 = '118';
 
 
 
