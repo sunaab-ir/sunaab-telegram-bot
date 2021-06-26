@@ -59,6 +59,7 @@ class group extends Controller
             $m118 = new m118();
             $m118->full_name = $full_name;
             $m118->first_name = $this->botUpdate->message->contact->first_name;
+            $m118->user_id = $this->botUser->user_id;
             if ($this->botUpdate->message->contact->last_name)
                 $m118->last_name = $this->botUpdate->message->contact->last_name;
             $m118->number = $this->botUpdate->message->contact->phone_number;
@@ -88,6 +89,7 @@ class group extends Controller
                                         $contact = new m118();
                                         $contact->full_name = $full_name;
                                         $contact->number = $mobile;
+                                        $contact->user_id = $this->botUser->user_id;
                                         if ($contact->save()) {
                                             $options['text'] = "مخاطب، " . $full_name . " با شماره " . $mobile . " با موفقیت در بخش 118  ربات ساناب ثبت شد\n\n بعدا برای دریافت شماره این مخاطب تنها نیاز است دقیقا متن زیر را بفرستید:\n\n/118 $full_name";
                                             $options['chat_id'] = $this->botUpdate->message->chat->id;
