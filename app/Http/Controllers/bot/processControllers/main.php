@@ -1441,6 +1441,7 @@ class main extends Controller
                     $full_name = $this->botUpdate->message->contact->first_name . ($this->botUpdate->message->contact->last_name ? " " . $this->botUpdate->message->contact->last_name : "");
                     $m118->full_name = $full_name;
                     $m118->first_name = $this->botUpdate->message->contact->first_name;
+                    $m118->user_id = $this->botUser->user_id;
                     if ($this->botUpdate->message->contact->last_name)
                         $m118->last_name = $this->botUpdate->message->contact->last_name;
                     $m118->number = $this->botUpdate->message->contact->phone_number;
@@ -1468,6 +1469,7 @@ class main extends Controller
                     $m118 = new m118();
                     $m118->full_name = $tmpData['contact_name'];
                     $m118->number = $this->botUpdate->message->text;
+                    $m118->user_id = $this->botUser->user_id;
                     if (!$this->botUser->is_admin)
                         $m118->validate = false;
                     $m118->save();
