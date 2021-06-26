@@ -147,14 +147,12 @@ class group extends Controller
                                     if (count($contact118)) {
                                         if (count($contact118) == 1) {
                                             $contact['chat_id'] = $this->botUpdate->message->chat->id;
-                                            if ($this->botUpdate->message->replyToMessage)
+                                            if (isset($this->botUpdate->message->replyToMessage))
                                                 $contact['reply_to_message_id'] = $this->botUpdate->message->replyToMessage->messageId;
                                             else
                                                 $contact['reply_to_message_id'] = $this->botUpdate->message->messageId;
                                             $contact['vcard'] = "شماره تماس " . $commandValue;
-                                            echo strpos($contact118[0]->number, "98", 0) . "\n";
                                             if (strpos($contact118[0]->number, "98", 0) === 0) {
-                                                echo "hey";
                                                 $contact['phone_number'] = "+" . $contact118[0]->number;
                                             } else {
                                                 $contact['phone_number'] = $contact118[0]->number;
@@ -201,7 +199,11 @@ class group extends Controller
                                         $options['reply_to_message_id'] = $this->botUpdate->message->messageId;
                                         $options['chat_id'] = $this->botUpdate->message->chat->id;
                                         $options['disable_notification'] = true;
-                                        $this->botService->sendBase('sendMessage', $options);
+                                        if ($response = $this->botService->sendBase('sendMessage', $options)) {
+                                            sleep(5);
+                                            $options['message_id'] = $response->messageId;
+                                            $this->botService->sendBase('deleteMessage', $options);
+                                        }
                                     }
                                 } else {
                                     $options['text'] = 'لطفا نام مخاطب را جهت جستجو به درستی وارد کنید';
