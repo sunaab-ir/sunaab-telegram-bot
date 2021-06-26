@@ -15,7 +15,7 @@ class CreateTeAdsTable extends Migration
     {
         Schema::create('te_ads', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('creator_user_id')->nullable();
+            $table->unsignedBigInteger('creator_user_id')->nullable();
             $table->string('title')->nullable();
             $table->longText('photo_file_id')->nullable();
             $table->mediumText('ad_text')->nullable();

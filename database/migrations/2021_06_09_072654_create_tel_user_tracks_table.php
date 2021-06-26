@@ -15,7 +15,7 @@ class CreateTelUserTracksTable extends Migration
     {
         Schema::create('tel_user_tracks', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->unsignedInteger('tel_user_id');
+            $table->unsignedBigInteger('tel_user_id');
             $table->unsignedInteger('tel_process_id');
             $table->string('process_state');
             $table->string('sub_process')->nullable();

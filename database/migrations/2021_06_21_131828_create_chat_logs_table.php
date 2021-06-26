@@ -15,8 +15,8 @@ class CreateChatLogsTable extends Migration
     {
         Schema::create('chat_logs', function (Blueprint $table) {
             $table->increments('id');
-            $table->unsignedInteger('from')->nullable();
-            $table->unsignedInteger('to')->nullable();
+            $table->unsignedBigInteger('from')->nullable();
+            $table->unsignedBigInteger('to')->nullable();
             $table->integer('time')->nullable();
             $table->mediumText('data')->nullable();
             $table->timestamps();

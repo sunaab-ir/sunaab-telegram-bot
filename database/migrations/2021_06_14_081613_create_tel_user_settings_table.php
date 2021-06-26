@@ -15,7 +15,7 @@ class CreateTelUserSettingsTable extends Migration
     {
         Schema::create('tel_user_settings', function (Blueprint $table) {
             $table->increments('id');
-            $table->unsignedInteger('tel_user_id');
+            $table->unsignedBigInteger('tel_user_id');
             $table->boolean('receive_ad')->default(true);
             $table->boolean('receive_village')->default(true);
             $table->timestamps();

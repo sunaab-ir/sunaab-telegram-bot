@@ -15,7 +15,7 @@ class CreateTelUserProfilesTable extends Migration
     {
         Schema::create('tel_user_profiles', function (Blueprint $table) {
             $table->increments('id');
-            $table->unsignedInteger('user_id');
+            $table->unsignedBigInteger('user_id');
             $table->string('full_name')->nullable();
             $table->enum('sex', ['man', 'woman'])->nullable();
             $table->string('mobile_number')->nullable();

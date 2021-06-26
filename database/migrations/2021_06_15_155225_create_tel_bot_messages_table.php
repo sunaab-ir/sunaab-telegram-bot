@@ -15,7 +15,7 @@ class CreateTelBotMessagesTable extends Migration
     {
         Schema::create('tel_bot_messages', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('chat_id')->nullable();
+            $table->bigInteger('chat_id')->nullable();
             $table->bigInteger('message_id')->nullable();
             $table->string('message_type')->nullable();
             $table->integer('time')->nullable();

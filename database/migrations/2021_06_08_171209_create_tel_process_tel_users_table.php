@@ -16,7 +16,7 @@ class CreateTelProcessTelUsersTable extends Migration
         Schema::create('tel_process_tel_users', function (Blueprint $table) {
             $table->increments('id');
             $table->unsignedInteger('tel_process_id');
-            $table->unsignedInteger('tel_user_id');
+            $table->unsignedBigInteger('tel_user_id');
             $table->string('sub_process')->nullable();
             $table->enum('process_state', ['normal', 'input', 'processing'])->default('normal');
             $table->json('tmp_data')->default("{}");

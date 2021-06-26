@@ -16,8 +16,8 @@ class CreateSentAdsTable extends Migration
         Schema::create('sent_ads', function (Blueprint $table) {
             $table->increments('id');
             $table->unsignedInteger('ad_id');
-            $table->unsignedInteger('user_id');
-            $table->unsignedInteger('chat_id');
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('chat_id');
             $table->integer('message_id');
             $table->integer('sent_time');
             $table->integer('state')->default(1);
