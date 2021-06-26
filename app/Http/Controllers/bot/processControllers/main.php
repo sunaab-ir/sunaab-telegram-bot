@@ -1349,7 +1349,7 @@ class main extends Controller
                         ]);
                         if (count($contact118) == 1) {
                             echo strpos($contact118[0]->number, "98", 0) . "\n";
-                            if (strpos($contact118[0]->number, "98", 0) != -1 && strpos($contact118[0]->number, "98", 0) == 0) {
+                            if (strpos($contact118[0]->number, "98", 0) === 0) {
                                 $options['phone_number'] = "+" . $contact118[0]->number;
                             }else {
                                 $options['phone_number'] = $contact118[0]->number;
@@ -1381,7 +1381,7 @@ class main extends Controller
                             $send = true;
                         }
                     } else {
-                        $options['text'] = "🧐 مخاطبی با این نام در 118 ربات ثبت نشده است";
+                        $options['text'] = "🧐 مخاطبی با این نام در 118 ربات ثبت نشده است، اگر از ثبت مخاطب اطمینان دارید، احتمالا مخاطب شما تأیید نشده است، لطفا بعدا سعی کنید";
                         $options['disable_notification'] = true;
                         $send = true;
                     }
