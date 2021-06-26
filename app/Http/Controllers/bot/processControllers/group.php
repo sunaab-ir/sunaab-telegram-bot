@@ -152,7 +152,7 @@ class group extends Controller
                                                 $contact['reply_to_message_id'] = $this->botUpdate->message->messageId;
                                             $contact['vcard'] = "شماره تماس " . $commandValue;
                                             echo strpos($contact118[0]->number, "98", 0) . "\n";
-                                            if (strpos($contact118[0]->number, "98", 0) != -1 && strpos($contact118[0]->number, "98", 0) == 0) {
+                                            if (strpos($contact118[0]->number, "98", 0) === 0) {
                                                 echo "hey";
                                                 $contact['phone_number'] = "+" . $contact118[0]->number;
                                             } else {
