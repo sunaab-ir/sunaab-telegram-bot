@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\City;
 use App\Models\County;
 use App\Models\teAd;
+use App\Models\telBotMessage;
 use App\Models\telUser;
 use App\Services\bot\botService;
 use Illuminate\Http\Request;
@@ -143,9 +144,19 @@ class admin extends Controller
                     $count = 0;
                     foreach ($users as $user) {
                         $options['chat_id'] = $user->chat_id;
-                        if ($this->botService->sendBase('sendMessage', $options)) {
+                        if ($response = $this->botService->sendBase('sendMessage', $options)) {
                          $count++;
+                        $messageLog = new telBotMessage();
+                        $messageLog->chat_id = $user->chat_id;
+                        $messageLog->message_id = $response->messageId;
+                        $messageLog->message_type = "directMessageAll";
+                        $messageLog->time = time();
+                        $messageLog->meta_data = json_encode([
+                            'message' => $options['text']
+                        ]);
+                        $messageLog->save();
                         }
+
                     }
                     $options['text'] = "پیام شما با موفقیت به $count کاربر ارسال شد";
                     $options['chat_id'] = $this->botUser->chat_id;
@@ -200,7 +211,17 @@ class admin extends Controller
                     $tmpData = json_decode($this->botUser->currentProcess->pivot->tmp_data, true);
                     $options['text'] = "📩 پیغام از طرف ربات:\n\n" . $this->botUpdate->getMessage()->text;
                     $options['chat_id'] = $tmpData['user_id'];
-                    $this->botService->sendBase('sendMessage', $options);
+                    if($response = $this->botService->sendBase('sendMessage', $options)) {
+                        $messageLog = new telBotMessage();
+                        $messageLog->chat_id = $tmpData['user_id'];
+                        $messageLog->message_id = $response->messageId;
+                        $messageLog->message_type = "directMessage";
+                        $messageLog->time = time();
+                        $messageLog->meta_data = json_encode([
+                            'message' => $options['text']
+                        ]);
+                        $messageLog->save();
+                    }
                     $options['text'] = "پیام شما با موفقیت به کاربر ارسال شد";
                     $options['chat_id'] = $this->botUser->chat_id;
                     $this->botService->sendBase('sendMessage', $options);
