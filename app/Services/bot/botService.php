@@ -222,6 +222,7 @@ class botService
     {
         if (!$type)
             return;
+        print_r($options);
         $response = null;
         try {
             resendSendBaseToTelegram:
@@ -236,6 +237,8 @@ class botService
             if ($type == 'sendPhoto') {
                 $type = 'sendMessage';
                 goto resendSendBaseToTelegram;
+            }else {
+                return false;
             }
         }
         if ($reset) {

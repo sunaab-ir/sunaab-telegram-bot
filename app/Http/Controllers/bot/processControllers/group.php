@@ -98,7 +98,12 @@ class group extends Controller
                                             $options['reply_to_message_id'] = $this->botUpdate->message->replyToMessage->messageId;
                                             $options['chat_id'] = $this->botUpdate->message->chat->id;
                                             $options['vcard'] = "شماره تماس " . $commandValue;
-                                            $options['phone_number'] = $contact->number;
+                                            if (strpos($contact->number, "98", 0) === 0) {
+                                                $options['phone_number'] = "+" . $contact->number;
+                                            }else {
+                                                $options['phone_number'] = $contact->number;
+                                            }
+
                                             $options['disable_notification'] = true;
                                             $options['first_name'] = $contact->full_name;
                                             $this->botService->sendBase('sendContact', $options);
@@ -138,18 +143,35 @@ class group extends Controller
                                         else
                                             $contact['reply_to_message_id'] = $this->botUpdate->message->messageId;
                                         $contact['vcard'] = "شماره تماس " . $commandValue;
-                                        $contact['phone_number'] = $contact118[0]->number;
+                                        echo strpos($contact118[0]->number, "98", 0) . "\n";
+                                        if (strpos($contact118[0]->number, "98", 0) != -1 && strpos($contact118[0]->number, "98", 0) == 0) {
+                                            echo "hey";
+                                            $contact['phone_number'] = "+" . $contact118[0]->number;
+                                        }else {
+                                            $contact['phone_number'] = $contact118[0]->number;
+                                        }
                                         if ($contact118[0]->first_name) {
                                             $contact['first_name'] = $contact118[0]->first_name;
                                             if ($contact118[0]->last_name) $contact['last_name'] = $contact118[0]->last_name;
                                         }
                                         else $contact['first_name'] = $contact118[0]->full_name;
-                                        $this->botService->sendBase('sendContact', $contact);
+                                        if (!$this->botService->sendBase('sendContact', $contact)){
+                                            $full_name = $contact118[0]->full_name;
+                                            $number = $contact['phone_number'];
+                                            $contact['text'] = "👤 نام مخاطب: $full_name\n📲 شماره مخاطب: $number\n\n";
+                                            $this->botService->sendBase('sendMessage', $contact);
+                                        }
                                     } else {
                                         $contacts['text'] = "نتیجه شما چند مخاطب دارد، لطفا مخاطب مد نظر را انتخاب کنید\n\n";
                                         foreach ($contact118 as $item) {
                                             $full_name = $item->full_name;
-                                            $number = $item->number;
+                                            if (strpos($item->number, "98", 0) === 0) {
+                                                echo "hey there\n";
+                                                $number = "0" . substr($item->number,2, strlen($item->number));
+                                            }else {
+                                                echo "hey no there\n";
+                                                $number = $item->number;
+                                            }
                                             $contacts['text'] .= "👤 نام مخاطب: $full_name\n📲 شماره مخاطب: $number\n\n";
                                         }
                                         $contacts['text'] .= "اگر شماره مد نظر در لیست وجود ندارد، به این معناست که در 118 ربات ساناب ثبت نشده، برای ثبت مخاطب در 118 ربات ساناب، باید نام و نام خانوادگی و شماره را به فرمت زیر بفرستید\n\nمثال:
