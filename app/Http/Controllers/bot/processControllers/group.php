@@ -76,7 +76,8 @@ class group extends Controller
             case '118':
             {
                 if ($command['offset'] === 0) {
-                    if ($this->botUser->profile) {
+//                    if ($this->botUser->profile) {
+                    if (true) {
                         if ($commandValue) {
                             if (strpos($this->botUpdate->message->text, "\n")) {
                                 $detail = explode("\n", $commandValue);
