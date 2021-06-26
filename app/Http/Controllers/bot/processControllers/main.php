@@ -1444,7 +1444,8 @@ class main extends Controller
                     if ($this->botUpdate->message->contact->last_name)
                         $m118->last_name = $this->botUpdate->message->contact->last_name;
                     $m118->number = $this->botUpdate->message->contact->phone_number;
-                    $m118->validate = false;
+                    if (!$this->botUser->is_admin)
+                        $m118->validate = false;
                     $m118->save();
                     $this->botService->handleProcess(null, [
                         'entry' => 'custom_message',
@@ -1467,7 +1468,8 @@ class main extends Controller
                     $m118 = new m118();
                     $m118->full_name = $tmpData['contact_name'];
                     $m118->number = $this->botUpdate->message->text;
-                    $m118->validate = false;
+                    if (!$this->botUser->is_admin)
+                        $m118->validate = false;
                     $m118->save();
                     $this->botService->handleProcess(null, [
                         'entry' => 'custom_message',
