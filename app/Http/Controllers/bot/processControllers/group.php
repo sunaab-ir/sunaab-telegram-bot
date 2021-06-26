@@ -147,7 +147,7 @@ class group extends Controller
                                     if (count($contact118)) {
                                         if (count($contact118) == 1) {
                                             $contact['chat_id'] = $this->botUpdate->message->chat->id;
-                                            if (isset($this->botUpdate->message->replyToMessage))
+                                            if ($this->botUpdate->message->replyToMessage->messageId)
                                                 $contact['reply_to_message_id'] = $this->botUpdate->message->replyToMessage->messageId;
                                             else
                                                 $contact['reply_to_message_id'] = $this->botUpdate->message->messageId;
@@ -188,7 +188,7 @@ class group extends Controller
 
 .";
                                             $contacts['chat_id'] = $this->botUpdate->message->chat->id;
-                                            if (isset($this->botUpdate->message->replyToMessage))
+                                            if ($this->botUpdate->message->replyToMessage->messageId)
                                                 $contacts['reply_to_message_id'] = $this->botUpdate->message->replyToMessage->messageId;
                                             else
                                                 $contacts['reply_to_message_id'] = $this->botUpdate->message->messageId;
