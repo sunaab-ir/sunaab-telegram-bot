@@ -153,7 +153,7 @@ class admin extends Controller
                         $messageLog->time = time();
                         $messageLog->meta_data = json_encode([
                             'message' => $options['text']
-                        ]);
+                        ], JSON_UNESCAPED_UNICODE);
                         $messageLog->save();
                         }
                     }
@@ -218,7 +218,7 @@ class admin extends Controller
                         $messageLog->time = time();
                         $messageLog->meta_data = json_encode([
                             'message' => $options['text']
-                        ]);
+                        ], JSON_UNESCAPED_UNICODE);
                         $messageLog->save();
                     }
                     $options['text'] = "پیام شما با موفقیت به کاربر ارسال شد";
