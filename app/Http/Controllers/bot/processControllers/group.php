@@ -61,7 +61,6 @@ class group extends Controller
             $m118->first_name = $this->botUpdate->message->contact->first_name;
             if ($this->botUpdate->message->contact->last_name)
                 $m118->last_name = $this->botUpdate->message->contact->last_name;
-            $m118->first_name = $this->botUpdate->message->contact->first_name;
             $m118->number = $this->botUpdate->message->contact->phone_number;
             $m118->save();
         }
