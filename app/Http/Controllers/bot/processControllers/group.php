@@ -218,7 +218,7 @@ class group extends Controller
                             $this->botService->sendBase('sendMessage', $options);
                         }
                     } else {
-                        $options['text'] = "⛔️ برای استفاده از 118 جابوز ربات ساناب، باید در ربات ثبت نام کامل انجام دهید، برای ثبت نام لطفا از لینک زیر اقدام کنید\nhttps://t.me/sunaab_bot?start=12";
+                        $options['text'] = "⛔️ برای استفاده از 118 جابوز ربات ساناب، باید در ربات ثبت نام کامل انجام دهید، برای ثبت نام لطفا از لینک زیر اقدام کنید\n⚠️ زمان مورد نیاز جهت ثبت نام کمتر از 1 دقیقه\nhttps://t.me/sunaab_bot?start=12";
                         $options['reply_to_message_id'] = $this->botUpdate->message->messageId;
                         $options['chat_id'] = $this->botUpdate->message->chat->id;
                         $options['disable_notification'] = true;
