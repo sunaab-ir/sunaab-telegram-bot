@@ -90,6 +90,14 @@ class admin extends Controller
                                 'process_id' => BOT_PROCESS__ADMIN__SEND_MESSAGE_TO_ALL
                             ])
                         ]
+                    ],
+                    [
+                        [
+                            'text' => 'ارسال پیام یکی از اعضای ربات',
+                            'callback_data' => json_encode([
+                                'process_id' => BOT_PROCESS__ADMIN__SEND_MESSAGE_TO_SINGLE
+                            ])
+                        ]
                     ]
                 ];
 
@@ -140,6 +148,60 @@ class admin extends Controller
                         }
                     }
                     $options['text'] = "پیام شما با موفقیت به $count کاربر ارسال شد";
+                    $options['chat_id'] = $this->botUser->chat_id;
+                    $this->botService->sendBase('sendMessage', $options);
+                    $this->botService->handleProcess(BOT_PROCESS__NAME__ADMIN_PANEL);
+                }
+                break;
+            }
+        }
+        if ($send)
+            $this->botService->send('editMessageText', $options, $back);
+    }
+    function sendMessageToSingle($entry = null) {
+        $sub_process = $this->botUser->currentProcess->pivot->sub_process;
+        $options = [];
+        $send = false;
+        $back = true;
+        switch ($sub_process) {
+            default: {
+                $options['text'] = "لطفا آی دی کاربر را ارسال کنید";
+                $send = true;
+                $this->botService->updateProcessData([
+                    'sub_process' => 'getId_input'
+                ]);
+                break;
+            }
+            case 'getId_input': {
+                if ($this->botUpdate->detectType() == 'message' && $this->botUpdate->getMessage()->detectType() == 'text') {
+                    $this->botService->updateProcessData([
+                        'tmp_data' => $this->botService->addJsonDataset(
+                            $this->botUser->currentProcess->pivot->tmp_data,
+                            'user_id',
+                            $this->botUpdate->getMessage()->text
+                        )
+                    ]);
+                    $this->botService->handleProcess(null, null, [
+                        'sub_process' => 'message'
+                    ]);
+                }
+                break;
+            }
+            case 'message': {
+                $options['text'] = "لطفا پیام را ارسال کنید (فقط متنی)";
+                $send = true;
+                $this->botService->updateProcessData([
+                    'sub_process' => 'message_input'
+                ]);
+                break;
+            }
+            case 'message_input': {
+                if ($this->botUpdate->detectType() == 'message' && $this->botUpdate->getMessage()->detectType() == 'text') {
+                    $tmpData = json_decode($this->botUser->currentProcess->pivot->tmp_data, true);
+                    $options['text'] = "📩 پیغام از طرف ربات:\n\n" . $this->botUpdate->getMessage()->text;
+                    $options['chat_id'] = $tmpData['user_id'];
+                    $this->botService->sendBase('sendMessage', $options);
+                    $options['text'] = "پیام شما با موفقیت به کاربر ارسال شد";
                     $options['chat_id'] = $this->botUser->chat_id;
                     $this->botService->sendBase('sendMessage', $options);
                     $this->botService->handleProcess(BOT_PROCESS__NAME__ADMIN_PANEL);
