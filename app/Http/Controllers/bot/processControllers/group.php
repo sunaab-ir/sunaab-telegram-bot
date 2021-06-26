@@ -134,7 +134,12 @@ class group extends Controller
                             }
                         } else {
                             if (strlen($commandValue) > 4) {
-                                $contact118 = m118::where("full_name", "like", "%$commandValue%")->get();
+                                $contact118 = m118::where([
+                                    ["full_name", "like", "%$commandValue%"],
+                                    [
+                                        'validate', true
+                                    ]
+                                ])->get();
                                 if (count($contact118)) {
                                     if (count($contact118) == 1) {
                                         $contact['chat_id'] = $this->botUpdate->message->chat->id;

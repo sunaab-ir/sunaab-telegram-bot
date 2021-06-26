@@ -5,6 +5,7 @@ namespace App\Http\Controllers\bot\processControllers;
 use App\Http\Controllers\Controller;
 use App\Models\City;
 use App\Models\County;
+use App\Models\m118;
 use App\Models\telUserProfile;
 use App\Models\Village;
 use App\Services\bot\botService;
@@ -91,6 +92,14 @@ class main extends Controller
                                 'sub_process' => ''
                             ])
                         ]
+                    ],
+                    [
+                      [
+                          'text' => 'شماره های 118',
+                          'callback_data' => json_encode([
+                              'process_id' => BOT_PROCESS__MAIN_118
+                          ])
+                      ]
                     ],
                     [
                         [
@@ -1255,6 +1264,230 @@ class main extends Controller
         $this->botService->send('editMessageText', [
             'text' => BOT_MESSAGE__ABOUT_SUNAAB
         ]);
+    }
+
+    function m118($entry = null) {
+        $sub_process = $this->botUser->currentProcess->pivot->sub_process;
+        $send = false;
+        $back = true;
+        $options = [];
+        $options['text'] = "";
+        $cancelButton = true;
+
+
+        if ($entry && isset($entry['entry'])) {
+            switch ($entry['entry']) {
+                case 'custom_message':
+                {
+                    $options['text'] .= $entry['message'];
+                    break;
+                }
+                default:
+                {
+                    $entryName = strtoupper($entry['entry']);
+                    $options['text'] .= constant("BOT_MESSAGE__ENTRY__$entryName");
+                    break;
+                }
+            }
+        }
+
+        switch ($sub_process) {
+            default: {
+                if (!isset($entry['entry']))
+                    $options['text'] .= "به بخش 118 ربات ساناب خوش آمدید\n\nلطفا از منوی زیر انتخاب کنید";
+                $options['reply_markup'] = json_encode([
+                   'inline_keyboard' => [
+                       [
+                           [
+                               'text' => '🔍 جستجوی مخاطب',
+                                'callback_data' => json_encode([
+                                    'sub_process' => '118_search'
+                                ])
+                           ],
+                           [
+                               'text' => '✏️ ثبت مخاطب',
+                                'callback_data' => json_encode([
+                                    'sub_process' => '118_insert'
+                                ])
+                           ]
+                       ]
+                   ]
+                ]);
+                $send = true;
+                break;
+            }
+            case '118_search': {
+                $options['text'] .= "لطفا نام مخاطب را وارد کنید\n\n⚠️ اگر از دانستن نام خانوادگی یا نام مطمئن نیستید، می توانید نام و یا نام خانوادگی را به تنهایی ارسال کنید";
+                $send = true;
+                $this->botService->updateProcessData([
+                    'sub_process' => '118_search_input'
+                ]);
+                break;
+            }
+            case '118_search_input': {
+                if ($this->botUpdate->detectType() == 'message' && $this->botUpdate->message->detectType() == 'text' && strlen($this->botUpdate->message->text) > 4) {
+                    $contact118 = m118::where([
+                        [
+                            "full_name", "like", "%" . $this->botUpdate->message->text . "%"
+                        ],
+                        [
+                            'validate', true
+                        ]
+                    ])->get();
+                    if (count($contact118)) {
+                        $options['reply_markup'] = json_encode([
+                            'inline_keyboard' => [
+                                [
+                                    [
+                                        'text' => "بازگشت به 118",
+                                        'callback_data' => json_encode([
+                                            'sub_process' => ''
+                                        ])
+                                    ]
+                                ]
+                            ]
+                        ]);
+                        if (count($contact118) == 1) {
+                            echo strpos($contact118[0]->number, "98", 0) . "\n";
+                            if (strpos($contact118[0]->number, "98", 0) != -1 && strpos($contact118[0]->number, "98", 0) == 0) {
+                                $options['phone_number'] = "+" . $contact118[0]->number;
+                            }else {
+                                $options['phone_number'] = $contact118[0]->number;
+                            }
+                            if ($contact118[0]->first_name) {
+                                $options['first_name'] = $contact118[0]->first_name;
+                                if ($contact118[0]->last_name) $options['last_name'] = $contact118[0]->last_name;
+                            }
+                            else $options['first_name'] = $contact118[0]->full_name;
+                            if (!$this->botService->send('sendContact', $options, $back)){
+                                $full_name = $contact118[0]->full_name;
+                                $number = $options['phone_number'];
+                                $options['text'] = "👤 نام مخاطب: $full_name\n📲 شماره مخاطب: $number\n\n";
+                                $send = true;
+                            }
+                        } else {
+                            $options['text'] = "نتیجه شما چند مخاطب دارد، لطفا مخاطب مد نظر را انتخاب کنید\n\n";
+                            foreach ($contact118 as $item) {
+                                $full_name = $item->full_name;
+                                if (strpos($item->number, "98", 0) === 0) {
+                                    $number = "0" . substr($item->number,2, strlen($item->number));
+                                }else {
+                                    $number = $item->number;
+                                }
+                                $options['text'] .= "👤 نام مخاطب: $full_name\n📲 شماره مخاطب: $number\n\n";
+                            }
+                            $options['text'] .= "اگر شماره مد نظر در لیست وجود ندارد، به این معناست که در 118 ربات ساناب ثبت نشده
+.";
+                            $send = true;
+                        }
+                    } else {
+                        $options['text'] = "🧐 مخاطبی با این نام در 118 ربات ثبت نشده است";
+                        $options['disable_notification'] = true;
+                        $send = true;
+                    }
+                }else {
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'invalid'
+                    ],[
+                        'sub_process' => '118_search'
+                    ]);
+                }
+                break;
+            }
+            case '118_insert': {
+                $options['text'] .= "از اینکه در جهت بهتر شدن خدمات دهی ساناب گامی بر می دارید سپاس گذاریم 🙏🏻\n\nبرای ثبت مخاطب در 118 ربات، دو روش وجود دارد\n\n1- میتوانید با به اشتراک گذاشتن مخاطب از مخاطبین موبایل، در یک قدم مخاطب را ثبت کنید\n2- میتوانید در دو مرحله مخاطب را ثبت کنید\n\nدر صورت انتخاب روش اول مخاطب را بفرستید، در غیر اینصورت نام و نام خانوادگی مخاطب را ارسال کنید";
+                $send = true;
+                $this->botService->updateProcessData([
+                    'sub_process' => '118_insert_input'
+                ]);
+                break;
+            }
+            case '118_insert_input': {
+                if ($this->botUpdate->detectType() == 'message' && $this->botUpdate->message->detectType() == 'text' && strlen($this->botUpdate->message->text) > 4) {
+                    $contact = m118::where('full_name', 'like', '%' .$this->botUpdate->message->text . '%')->first();
+                    if ($contact){
+                        $this->botService->handleProcess(null, [
+                            'entry' => 'custom_message',
+                            'message' => "⛔️ مخاطبی با همین نام هم اکنون در 118 ربات وجود دارد، اگه در هنگام جستجو قابل دسترسی نیست، لطفا منتظر تأیید مخاطب باشید",
+                        ], [
+                            'sub_process' => ''
+                        ]);
+                        return;
+                    }
+                    $this->botService->updateProcessData([
+                        'tmp_data' => $this->botService->addJsonDataset(
+                            $this->botUser->currentProcess->pivot->tmp_data,
+                            'contact_name',
+                            $this->botUpdate->message->text
+                        )
+                    ]);
+                    $options['text'] .= "حالا شماره مخاطب را ارسال کنید، مانند:\n\n09033292307 یا +989033292307";
+                    $send = true;
+                    $this->botService->updateProcessData([
+                        'sub_process' => '118_insert_number_input'
+                    ]);
+                } else if ($this->botUpdate->detectType() == 'message' && $this->botUpdate->message->detectType() == 'contact') {
+                    $contact = m118::where('number', 'like', '%' .$this->botUpdate->message->contact->phone_number . '%')->first();
+                    if ($contact){
+                        $this->botService->handleProcess(null, [
+                            'entry' => 'custom_message',
+                            'message' => "⛔️ مخاطبی با همین شماره هم اکنون در 118 ربات وجود دارد، اگه در هنگام جستجو قابل دسترسی نیست، لطفا منتظر تأیید مخاطب باشید",
+                        ], [
+                            'sub_process' => ''
+                        ]);
+                        return;
+                    }
+                    $m118 = new m118();
+                    $full_name = $this->botUpdate->message->contact->first_name . ($this->botUpdate->message->contact->last_name ? " " . $this->botUpdate->message->contact->last_name : "");
+                    $m118->full_name = $full_name;
+                    $m118->first_name = $this->botUpdate->message->contact->first_name;
+                    if ($this->botUpdate->message->contact->last_name)
+                        $m118->last_name = $this->botUpdate->message->contact->last_name;
+                    $m118->number = $this->botUpdate->message->contact->phone_number;
+                    $m118->validate = false;
+                    $m118->save();
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'custom_message',
+                        'message' => "✅ مخاطب شما با موفقیت ثبت شد و پس از تأیید قابل دسترسی خواهد بود، با تشکر همکاری شما 🌹\n\nـ"
+                    ], [
+                        'sub_process' => ''
+                    ]);
+                } else {
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'invalid',
+                    ], [
+                        'sub_process' => '118_insert'
+                    ]);
+                }
+                break;
+            }
+            case '118_insert_number_input': {
+                if ($this->botUpdate->detectType() == 'message' && $this->botUpdate->message->detectType() == 'text' && preg_match("/^[+\u0600-\u06FF\s0-9]+\w{10}$/", $this->botUpdate->message->text)) {
+                    $tmpData = json_decode($this->botUser->currentProcess->pivot->tmp_data, true);
+                    $m118 = new m118();
+                    $m118->full_name = $tmpData['contact_name'];
+                    $m118->number = $this->botUpdate->message->text;
+                    $m118->validate = false;
+                    $m118->save();
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'custom_message',
+                        'message' => "✅ مخاطب شما با موفقیت ثبت شد و پس از تأیید قابل دسترسی خواهد بود، با تشکر همکاری شما 🌹\n\nـ"
+                    ], [
+                        'sub_process' => ''
+                    ]);
+                }else {
+                    $this->botService->handleProcess(null, [
+                        'entry' => 'invalid',
+                    ], [
+                        'sub_process' => '118_insert'
+                    ]);
+                }
+                break;
+            }
+        }
+
+        if ($send)
+            $this->botService->send('editMessageText', $options, $back);
     }
 
     function contact ()

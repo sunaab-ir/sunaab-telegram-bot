@@ -18,6 +18,7 @@ class Create118sTable extends Migration
             $table->string('full_name');
             $table->string('first_name')->nullable();
             $table->string('last_name')->nullable();
+            $table->boolean('validate')->default(true);
             $table->string('number');
             $table->timestamps();
         });

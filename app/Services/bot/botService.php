@@ -154,7 +154,7 @@ class botService
         } catch (TelegramResponseException $exception) {
             Log::error($exception->getCode() . " -------------- " . $exception->getMessage());
             echo $exception->getCode() . " ------\n-------- " . $exception->getMessage() . "\n\n";
-            if ($exception->getCode() == 400) {
+            if ($exception->getCode() === 400) {
                 unset($options['message_id']);
                 $type = 'sendMessage';
                 goto resendToTelegram;
@@ -162,6 +162,10 @@ class botService
             if (in_array($exception->getCode(), [29, 28])) {
                 goto resendToTelegram;
             }
+            return false;
+        }
+        if (!isset($response)) {
+            return false;
         }
         if (in_array($type, ["sendMessage"]) && isset($response['message_id']) || (isset($response['message_id']) && $hold)) {
             if ($this->botUser->last_bot_message_id && !$deleteMessages && (time() - ($this->botUser->last_bot_message_date ?? time() - 1000)) < 172800) {
@@ -216,6 +220,7 @@ class botService
             }
             return $response;
         }
+        return $response;
     }
 
     function sendBase ($type, $options = [], $async = false, $reset = false)
