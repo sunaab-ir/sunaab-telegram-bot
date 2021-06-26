@@ -156,7 +156,6 @@ class admin extends Controller
                         ]);
                         $messageLog->save();
                         }
-
                     }
                     $options['text'] = "پیام شما با موفقیت به $count کاربر ارسال شد";
                     $options['chat_id'] = $this->botUser->chat_id;
