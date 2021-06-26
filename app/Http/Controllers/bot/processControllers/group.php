@@ -58,6 +58,10 @@ class group extends Controller
         if (!$contact) {
             $m118 = new m118();
             $m118->full_name = $full_name;
+            $m118->first_name = $this->botUpdate->message->contact->first_name;
+            if ($this->botUpdate->message->contact->last_name)
+                $m118->last_name = $this->botUpdate->message->contact->last_name;
+            $m118->first_name = $this->botUpdate->message->contact->first_name;
             $m118->number = $this->botUpdate->message->contact->phone_number;
             $m118->save();
         }
@@ -136,7 +140,11 @@ class group extends Controller
                                             $contact['reply_to_message_id'] = $this->botUpdate->message->messageId;
                                         $contact['vcard'] = "شماره تماس " . $commandValue;
                                         $contact['phone_number'] = $contact118[0]->number;
-                                        $contact['first_name'] = $commandValue;
+                                        if ($contact118[0]->first_name) {
+                                            $contact['first_name'] = $contact118[0]->first_name;
+                                            if ($contact118[0]->last_name) $contact['last_name'] = $contact118[0]->last_name;
+                                        }
+                                        else $contact['first_name'] = $contact118[0]->full_name;
                                         $this->botService->sendBase('sendContact', $contact);
                                     } else {
                                         $contacts['text'] = "نتیجه شما چند مخاطب دارد، لطفا مخاطب مد نظر را انتخاب کنید\n\n";
