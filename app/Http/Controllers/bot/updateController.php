@@ -34,7 +34,7 @@ class updateController extends Controller
                         $this->handleCommands($request);
                     $this->handleNormalUpdate($request);
                 }
-            }else if ($this->botUpdate->getMessage()->getChat()->type == 'group') {
+            }else if (in_array($this->botUpdate->getMessage()->getChat()->type, ['group', 'supergroup'])) {
                 $groupController = new group();
                 $groupController->handleGroupUpdate();
             }
