@@ -228,7 +228,7 @@ class group extends Controller
                             $options['disable_notification'] = true;
                             $options['chat_id'] = $this->botUpdate->message->chat->id;
                             if ($response = $this->botService->sendBase('sendMessage', $options)) {
-                                sleep(5);
+                                sleep(10);
                                 $options['message_id'] = $response->messageId;
                                 $this->botService->sendBase('deleteMessage', $options);
                             }
