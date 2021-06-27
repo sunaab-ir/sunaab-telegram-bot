@@ -134,7 +134,11 @@ class group extends Controller
 09033292307‌‏
 
 .";
-                                    $this->botService->sendBase('sendMessage', $options);
+                                    if ($response = $this->botService->sendBase('sendMessage', $options)) {
+                                        sleep(5);
+                                        $options['message_id'] = $response->messageId;
+                                        $this->botService->sendBase('deleteMessage', $options);
+                                    }
                                 }
                             } else {
                                 if (strlen($commandValue) > 4) {
@@ -184,7 +188,7 @@ class group extends Controller
 
 ‏/118
 ابوالفضل اکبرزاده
-09033292307‌‏
+09219871833‌‏
 
 .";
                                             $contacts['chat_id'] = $this->botUpdate->message->chat->id;
@@ -193,6 +197,7 @@ class group extends Controller
                                             else
                                                 $contacts['reply_to_message_id'] = $this->botUpdate->message->messageId;
                                             $this->botService->sendBase('sendMessage', $contacts);
+
                                         }
                                     } else {
                                         $options['text'] = "🧐 مخاطبی با این نام در 118 ربات ثبت نشده است، لطفا درخواست ثبت دهید";
@@ -210,7 +215,11 @@ class group extends Controller
                                     $options['reply_to_message_id'] = $this->botUpdate->message->messageId;
                                     $options['chat_id'] = $this->botUpdate->message->chat->id;
                                     $options['disable_notification'] = true;
-                                    $this->botService->sendBase('sendMessage', $options);
+                                    if ($response = $this->botService->sendBase('sendMessage', $options)) {
+                                        sleep(5);
+                                        $options['message_id'] = $response->messageId;
+                                        $this->botService->sendBase('deleteMessage', $options);
+                                    }
                                 }
                             }
                         } else {
@@ -218,7 +227,11 @@ class group extends Controller
                             $options['reply_to_message_id'] = $this->botUpdate->message->messageId;
                             $options['disable_notification'] = true;
                             $options['chat_id'] = $this->botUpdate->message->chat->id;
-                            $this->botService->sendBase('sendMessage', $options);
+                            if ($response = $this->botService->sendBase('sendMessage', $options)) {
+                                sleep(5);
+                                $options['message_id'] = $response->messageId;
+                                $this->botService->sendBase('deleteMessage', $options);
+                            }
                         }
                     } else {
                         $options['text'] = "⛔️ برای استفاده از 118 جابوز ربات ساناب، باید در ربات ثبت نام کامل انجام دهید، برای ثبت نام لطفا از لینک زیر اقدام کنید\n⚠️ زمان مورد نیاز جهت ثبت نام کمتر از 1 دقیقه\nhttps://t.me/sunaab_bot?start=12";
