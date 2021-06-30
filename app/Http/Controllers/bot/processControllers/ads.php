@@ -1752,6 +1752,13 @@ class ads extends Controller
                 $this->botService->sendBase('editMessageText', $options);
                 break;
             }
+            case 'ur': {
+                $sentRecord = $this->botUser->receiveAds()->where('ad_id', $callbackData['aid'])->first();
+                $sentRecord->state = BOT__SENT_AD__STATE__REJECTED;
+                $sentRecord->save();
+                $this->updateAdAgreeMessage($sentRecord, 'reject');
+                break;
+            }
         }
     }
 
@@ -1766,6 +1773,26 @@ class ads extends Controller
                     $messageText = $this->botUpdate->callbackQuery->message->caption;
 
                 $messageText .= "\n\n✅ درخواست پذیرش شما با موفقیت به ارسال کننده تحویل داده شد \nارسال کننده آگهی به زودی با شما در ارتباط خواهد بود";
+
+                $options['chat_id'] = $sentRecord->chat_id;
+                $options['message_id'] = $sentRecord->message_id;
+                if ($sentRecord->type == 'message') {
+                    $type = 'editMessageText';
+                    $options['text'] = $messageText;
+                } else {
+                    $type = 'editMessageCaption';
+                    $options['caption'] = $messageText;
+                }
+                $this->botService->sendBase($type, $options);
+                break;
+            }
+            case 'reject': {
+                if ($sentRecord->type == 'message')
+                    $messageText = $this->botUpdate->callbackQuery->message->text;
+                else if ($sentRecord->type == 'media')
+                    $messageText = $this->botUpdate->callbackQuery->message->caption;
+
+                $messageText .= "\n\nشما این آگهی را رد کردید";
 
                 $options['chat_id'] = $sentRecord->chat_id;
                 $options['message_id'] = $sentRecord->message_id;

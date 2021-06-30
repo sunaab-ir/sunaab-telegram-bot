@@ -39,7 +39,7 @@ class adService
         $ad = teAd::find($adId);
         if (!$ad)
             return;
-
+        $adCreatorFullName = $ad->creator->profile->full_name;
         $profile_where = [
             ['county_id', '=', $ad->county_id],
             ['user_id', '<>', $this->botUser->user_id],
@@ -67,6 +67,7 @@ class adService
             })->get();
             $adId = $ad->id;
             $options['caption'] = "📣 آگهی جدید\n";
+            $options['caption'] .= "📄از طرف: $adCreatorFullName\n";
             $options['caption'] .= "📄 کد آگهی: $adId\n";
             $adTitle = $ad->title ?? 'بدون عنوان';
             $adBody = $ad->ad_text;
